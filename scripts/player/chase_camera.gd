@@ -34,6 +34,7 @@ var cine_angle := 0.0
 var cine_facing := Vector3.ZERO   # 0이 아니면 이 방향 쪽에서만 호를 그리며 바라본다
 var cine_turn := 0.33
 var eye_zoom := 0.0
+var photo := false   # 포토 모드가 카메라를 잡고 있다
 
 
 func _ready() -> void:
@@ -120,6 +121,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	if photo:
+		return
 	var now := Time.get_ticks_usec()
 	var real_dt := clampf((now - _last_us) / 1000000.0, 0.0, 0.1)
 	_last_us = now

@@ -154,6 +154,36 @@ static func whale() -> Node3D:
 	return root
 
 
+## 매사냥꾼(응사): 갓을 쓰고 한쪽 팔에 가죽 장갑. 오른팔로 미끼 줄을 돌린다
+static func human() -> Node3D:
+	var root := Node3D.new()
+	var coat := Color(0.36, 0.28, 0.2)
+	var skin := Color(0.85, 0.68, 0.52)
+	var black := Color(0.08, 0.07, 0.07)
+	var glove := Color(0.55, 0.38, 0.2)
+	var sph := _sphere()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.5
+	cyl.bottom_radius = 0.5
+	cyl.height = 1.0
+	cyl.radial_segments = 10
+	for side: int in [-1, 1]:
+		_part(root, cyl, black, Vector3(0.13 * side, 0.45, 0), Vector3(0.16, 0.9, 0.16))
+	_part(root, cyl, coat, Vector3(0, 1.25, 0), Vector3(0.52, 0.85, 0.34))
+	_part(root, cyl, Color(0.92, 0.9, 0.84), Vector3(0, 1.62, 0), Vector3(0.42, 0.1, 0.3))
+	_part(root, sph, skin, Vector3(0, 1.85, 0), Vector3(0.26, 0.3, 0.26))
+	# 갓: 넓은 챙 + 높은 모자
+	_part(root, cyl, black, Vector3(0, 2.0, 0), Vector3(0.8, 0.02, 0.8))
+	_part(root, cyl, black, Vector3(0, 2.12, 0), Vector3(0.24, 0.22, 0.24))
+	# 왼팔: 매를 받는 장갑
+	_part(root, cyl, coat, Vector3(-0.34, 1.35, -0.12), Vector3(0.12, 0.5, 0.12), Vector3(-0.9, 0, 0.2))
+	_part(root, sph, glove, Vector3(-0.38, 1.5, -0.38), Vector3(0.16, 0.16, 0.2))
+	# 오른팔: 미끼 줄을 돌리는 팔 (회전 축)
+	var arm := _pivot(root, Vector3(0.3, 1.55, 0), "arm")
+	_part(arm, cyl, coat, Vector3(0.0, 0.3, 0), Vector3(0.12, 0.6, 0.12))
+	return root
+
+
 ## 번식지에 앉은 바닷새 한 마리 (멀티메시용)
 static func sitting_bird_mesh() -> Mesh:
 	var st := SurfaceTool.new()

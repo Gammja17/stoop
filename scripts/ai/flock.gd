@@ -31,6 +31,8 @@ func setup(p_kind: String, p_home: Vector3, p_r: float) -> Flock:
 func add(p: Prey) -> void:
 	members.append(p)
 	p.flock = self
+	if members.size() == 1:
+		centroid = p.position   # 첫 계산 전에도 대략 맞는 위치
 
 
 func remove(p: Prey) -> void:

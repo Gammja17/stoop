@@ -29,6 +29,10 @@ const LIST := [
 	["eagle", "거인에 맞서", "Giant Slayer", "흰꼬리수리를 들이받아 쫓아낸다", "Ram a white-tailed eagle away"],
 	["golden", "황금 사냥", "Golden Hunt", "황금 비둘기를 잡는다", "Catch the golden pigeon"],
 	["challenger", "도전자", "Challenger", "돌발 도전 10번 성공", "Win 10 challenges"],
+	["coop", "부부 사냥", "Tandem Hunt", "짝이 몰아 띄운 새를 잡는다", "Catch prey your mate flushed"],
+	["shichimi", "시치미", "Shichimi", "매사냥꾼의 미끼를 낚아채고 시치미를 받는다", "Snatch the falconer's lure and earn a leg tag"],
+	["cache", "비상식량", "Rainy Day", "먹이를 숨겨 둔다", "Cache prey for later"],
+	["migration", "대이동", "Great Migration", "가을 철새 떼와 먼 바다까지 함께 난다", "Fly with the autumn migration"],
 	["legend", "해동청", "Haedongcheong", "전설의 흰 매에게 인정받는다", "Earn the respect of the legendary white falcon"],
 ]
 

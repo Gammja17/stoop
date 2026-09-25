@@ -46,6 +46,7 @@ var _err_t := 0.0
 var _under := false       # 잠수 중
 var _lod_n := randi() % 4
 var _lod_acc := 0.0
+var flushed_t := 0.0     # 짝이 몰아 띄운 뒤: 허둥대서 잘 못 피한다
 
 const LOD_NEAR := 350.0   # 이 안은 매 프레임
 const LOD_DIST := 900.0   # 이 밖은 8프레임마다 (사이는 3프레임마다)
@@ -103,6 +104,7 @@ func _process(delta: float) -> void:
 	_lod_acc = 0.0
 	prev = global_position
 	juke_cd -= delta
+	flushed_t -= delta
 	catch_lock -= delta
 	match state:
 		S.FLY, S.FLEE:
@@ -240,7 +242,7 @@ func _flee_dir(delta: float) -> Vector3:
 			if closest.length() < 7.0:
 				# 한 번의 접근에 한 번만 판정한다
 				juke_cd = 1.2
-				if randf() < float(t.agility):
+				if randf() < float(t.agility) * (0.25 if flushed_t > 0.0 else 1.0):
 					_juke(f.velocity)
 	if d > 170.0:
 		calm_t += delta

@@ -203,6 +203,31 @@ func _mi(parent: Node3D, mesh: Mesh) -> void:
 	parent.add_child(mi)
 
 
+## 매사냥꾼이 달아 준 시치미 (다리에 매단 흰 이름표와 방울)
+func add_shichimi() -> void:
+	var tag := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.012, 0.03, 0.003)
+	var tm := StandardMaterial3D.new()
+	tm.albedo_color = Color(0.97, 0.96, 0.92)
+	bm.material = tm
+	tag.mesh = bm
+	tag.position = Vector3(0.03, -0.055, 0.01)
+	legs.add_child(tag)
+	var bell := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.006
+	sm.height = 0.012
+	var gm := StandardMaterial3D.new()
+	gm.albedo_color = Color(0.95, 0.75, 0.25)
+	gm.metallic = 0.8
+	gm.roughness = 0.3
+	sm.material = gm
+	bell.mesh = sm
+	bell.position = Vector3(-0.03, -0.05, 0.008)
+	legs.add_child(bell)
+
+
 ## 1인칭일 때 몸통·꼬리·다리를 숨긴다(날개만 보이게)
 func set_body_visible(v: bool) -> void:
 	_body_hidden = not v

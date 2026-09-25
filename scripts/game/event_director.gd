@@ -3,8 +3,10 @@ extends Node
 ## 돌발 이벤트와 제한시간 도전. 1~2분마다 하나씩 벌어진다. 성공하면 경험.
 
 const CHALLENGES := ["fast_kill", "climb", "two_kills", "speed_330", "roll_dive"]
-const XP := {"golden": 150, "race": 90, "thief": 70, "fast_kill": 120, "climb": 60, "two_kills": 100, "speed_330": 80, "roll_dive": 70}
-const TIME := {"golden": 90.0, "race": 60.0, "thief": 45.0, "fast_kill": 45.0, "climb": 25.0, "two_kills": 60.0, "speed_330": 45.0, "roll_dive": 45.0}
+const XP := {"golden": 150, "race": 90, "thief": 70, "fast_kill": 120, "climb": 60, "two_kills": 100, "speed_330": 80, "roll_dive": 70, "falconer": 80, "migration": 120}
+const TIME := {"golden": 90.0, "race": 60.0, "thief": 45.0, "fast_kill": 45.0, "climb": 25.0, "two_kills": 60.0, "speed_330": 45.0, "roll_dive": 45.0, "falconer": 90.0, "migration": 150.0}
+const MIG_FROM := Vector3(-150, 0, 560)
+const MIG_TO := Vector3(2600, 0, 1250)
 
 var main
 var cur := ""
@@ -17,6 +19,10 @@ var race_flock: Flock
 var thief: Gull
 var thief_prey: Prey
 var _stolen := false
+var falconer: Falconer
+var mig_flock: Flock
+var _mig_s := 0.0
+var _mig_with := 0.0
 
 
 func setup(p_main) -> void:
@@ -56,6 +62,33 @@ func update(delta: float) -> void:
 			if main.falcon.kmh() >= 330.0:
 				_success()
 				return
+		"falconer":
+			if falconer and is_instance_valid(falconer) and not falconer.caught:
+				var f: Falcon = main.falcon
+				if f.is_flying() and f.global_position.distance_to(falconer.lure_pos()) < 3.8:
+					falconer.caught = true
+					Records.unlock_plumage("shichimi")
+					Records.unlock("shichimi")
+					main.refresh_plumage()
+					main.hud.popup(Loc.t("ev_falconer_ok"), Loc.t("ev_falconer_ok_sub"), Color(1.0, 0.9, 0.7), 2.6)
+					_success()
+					return
+		"migration":
+			if mig_flock == null or not is_instance_valid(mig_flock) or mig_flock.members.size() < 5:
+				_fail()
+				return
+			# 철새 떼가 남동쪽 먼 바다로 떠난다
+			_mig_s += delta * 15.0
+			var total := MIG_FROM.distance_to(MIG_TO)
+			var pt := MIG_FROM.lerp(MIG_TO, clampf(_mig_s / total, 0.0, 1.0))
+			mig_flock.home = pt
+			mig_flock.target = Vector3(pt.x, WorldShape.floor_y(pt.x, pt.z) + 40.0, pt.z)
+			if main.falcon.global_position.distance_to(mig_flock.centroid) < 200.0:
+				_mig_with += delta
+			if _mig_with >= 60.0:
+				Records.unlock("migration")
+				_success()
+				return
 	if left <= 0.0:
 		# 도둑 까마귀에게 끝까지 안 뺏겼으면 성공
 		if cur == "thief" and not _stolen and main.falcon.carrying:
@@ -76,6 +109,9 @@ func _eligible() -> Array:
 	out += ["golden", "golden", "race", "race"]
 	if main.falcon.carrying:
 		out += ["thief", "thief", "thief"]
+	out += ["falconer", "falconer"] if not Records.has_plumage("shichimi") else ["falconer"]
+	if int(GameState.data.get("season", 0)) == 2:
+		out += ["migration", "migration", "migration"]
 	return out
 
 
@@ -93,6 +129,15 @@ func _start() -> void:
 			_spawn_race()
 		"thief":
 			_spawn_thief()
+		"falconer":
+			var fp := WorldShape.fields + Vector3(90, 0, -70)
+			fp.y = WorldShape.ground(fp.x, fp.z)
+			falconer = Falconer.new().setup(fp)
+			main.add_child(falconer)
+		"migration":
+			_mig_s = 0.0
+			_mig_with = 0.0
+			mig_flock = main.prey_mgr.spawn_group("sandpiper", MIG_FROM, MIG_FROM, 200.0, 40, "mig_ev")
 	main.hud.popup(Loc.t("ev_" + id), Loc.t("ev_" + id + "_d"), Color(1, 0.85, 0.3), 2.4)
 	GameState.say(Loc.t("ev_" + id) + " — " + Loc.t("ev_" + id + "_d"), "gold")
 	Sfx.play("chime", -2.0, 1.2)
@@ -174,6 +219,13 @@ func _end_quiet() -> void:
 			thief.prey.vanish()
 		main.prey_mgr.gulls.erase(thief)
 		thief.queue_free()
+	if falconer and is_instance_valid(falconer):
+		var fz := falconer
+		get_tree().create_timer(6.0, false).timeout.connect(func():
+			if is_instance_valid(fz):
+				fz.queue_free())
+	falconer = null
+	mig_flock = null
 	golden = null
 	hunter = null
 	race_flock = null
@@ -214,6 +266,8 @@ func on_display(_peak: float, rolls: int) -> void:
 func objective() -> Dictionary:
 	if cur == "":
 		return {}
+	if cur == "migration":
+		return {"text": Loc.t("ev_migration") + " — %d/60" % int(_mig_with) + Loc.t("sec")}
 	return {"text": Loc.t("ev_" + cur) + " — %d" % int(ceil(left)) + Loc.t("sec")}
 
 
@@ -227,4 +281,8 @@ func markers() -> Array:
 		out.append({"pos": race_flock.centroid, "color": Color(0.8, 1.0, 0.6), "label": Loc.t("mk_race")})
 	if thief and is_instance_valid(thief):
 		out.append({"pos": thief.global_position, "color": Color(1.0, 0.3, 0.25), "label": Loc.t("mk_thief")})
+	if falconer and is_instance_valid(falconer) and not falconer.caught:
+		out.append({"pos": falconer.lure_pos() + Vector3(0, 2, 0), "color": Color(1.0, 0.9, 0.7), "label": Loc.t("mk_falconer")})
+	if mig_flock and is_instance_valid(mig_flock) and not mig_flock.members.is_empty():
+		out.append({"pos": mig_flock.centroid, "color": Color(0.7, 0.9, 1.0), "label": Loc.t("mk_migration")})
 	return out

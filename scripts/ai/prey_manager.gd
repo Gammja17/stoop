@@ -258,6 +258,19 @@ func clear_bats() -> void:
 			p.vanish()
 
 
+## 가까운 새떼 (협동 사냥 대상)
+func nearest_flock(p: Vector3, r: float) -> Flock:
+	var best: Flock = null
+	var bd := r
+	for fl in flocks:
+		if is_instance_valid(fl) and fl.members.size() >= 2 and fl.kind != "bat":
+			var d: float = fl.centroid.distance_to(p)
+			if d < bd:
+				bd = d
+				best = fl
+	return best
+
+
 func markers() -> Array:
 	var out := []
 	if eagle and eagle.visible and eagle.mode == SeaEagle.E.CHASE:

@@ -39,6 +39,7 @@ const ACTIONS := {
 	"map": [["k", KEY_M], ["k", KEY_TAB], ["j", JOY_BUTTON_BACK]],
 	"view": [["k", KEY_V], ["j", JOY_BUTTON_RIGHT_STICK]],
 	"growth": [["k", KEY_P], ["j", JOY_BUTTON_DPAD_UP]],
+	"photo": [["k", KEY_O], ["j", JOY_BUTTON_DPAD_DOWN]],
 	"pause": [["k", KEY_ESCAPE], ["j", JOY_BUTTON_START]],
 }
 
@@ -102,6 +103,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			DirAccess.make_dir_recursive_absolute(dir)
 			var stamp := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
 			var path := "%s/stoop_%s.png" % [dir, stamp]
+			if OS.has_feature("web"):
+				# 웹: 파일로 내려받는다
+				JavaScriptBridge.download_buffer(get_viewport().get_texture().get_image().save_png_to_buffer(), "stoop_%s.png" % stamp, "image/png")
+				return
 			get_viewport().get_texture().get_image().save_png(path)
 			GameState.say(Loc.t("screenshot_saved") % ProjectSettings.globalize_path(path), "good")
 

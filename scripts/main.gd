@@ -85,6 +85,9 @@ func _ready() -> void:
 	events.setup(self)
 	if TouchControls.wanted():
 		_enable_touch()
+	photo = load("res://scenes/ui/photo_mode.tscn").instantiate()
+	photo.main = self
+	$MenuLayer.add_child(photo)
 	legend = LegendQuest.new()
 	legend.name = "Legend"
 	add_child(legend)
@@ -153,6 +156,7 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	_mus_state = "calm"
 	events.reset()
 	legend.restore()
+	refresh_caches()
 	Sfx.music_gain = 0.0
 	var pro := int(GameState.data.get("prologue", -1))
 	if pro >= 0:
@@ -174,6 +178,8 @@ func _rebuild_falcon(spec: String = "") -> void:
 		spec = fs[0]
 		extra = fs[1]
 	falcon.model.setup(spec, extra)
+	if Records.has_plumage("shichimi") and spec != "juvenile":
+		falcon.model.add_shichimi()
 	falcon.apply_stats()
 	falcon.carrying = null
 	camera._apply_body_visibility()
@@ -256,7 +262,7 @@ func _process(delta: float) -> void:
 		events.update(delta)
 		legend.update(delta)
 	hud.update_hud(self, delta)
-	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers() + legend.markers()
+	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers() + legend.markers() + cache_markers()
 	_check_islands(delta)
 	_update_music(delta)
 	camera.eye_zoom = _eye
@@ -452,6 +458,9 @@ func _die(cause: String) -> void:
 # ---------- 먹기 ----------
 
 func _start_eating() -> void:
+	if falcon.carrying == null and falcon.state == Falcon.State.PERCHED:
+		_eat_cache()
+		return
 	if falcon.carrying == null or eating > 0.0:
 		return
 	var p: Prey = falcon.carrying as Prey
@@ -491,6 +500,10 @@ func _drop() -> void:
 	if falcon.carrying == null:
 		return
 	eating = 0.0
+	# 둥지가 아닌 곳에 앉아 있으면 먹이를 숨겨 둔다 (실제 송골매도 바위틈에 먹이를 저장한다)
+	if falcon.state == Falcon.State.PERCHED and falcon.perch.get("kind", "") != "eyrie" and not prologue.active:
+		_cache_prey()
+		return
 	var p := falcon.drop_prey(true)
 	Sfx.play("whoosh", -8.0, 1.2)
 	life.on_drop(p)
@@ -527,6 +540,8 @@ func _on_contact(p: Prey, how: String) -> void:
 				var xp := int((15 + int(kmh / 12.0) + (20 if perfect else 0)) * float(XP_KIND.get(p.kind, 1.0)))
 				_strike_juice(p, kmh, perfect, xp)
 				gain_xp(xp)
+				if p.flushed_t > 0.0:
+					_coop_bonus()
 				prologue.on_struck(p)
 				_check_hunt_records(p, perfect)
 				events.on_kill(p, kmh)
@@ -537,6 +552,8 @@ func _on_contact(p: Prey, how: String) -> void:
 				GameState.record_prey(p.kind)
 				_bind_juice(p, Loc.t("bind"))
 				gain_xp(int(10 * float(XP_KIND.get(p.kind, 1.0))))
+				if p.flushed_t > 0.0:
+					_coop_bonus()
 				prologue.on_struck(p)
 				_check_hunt_records(p, false)
 				events.on_kill(p, kmh)
@@ -593,6 +610,112 @@ func _on_gull_hit(g: Gull) -> void:
 	Fx.feathers(fx_root, g.global_position, falcon.velocity, Color(1, 1, 1), Color(0.7, 0.72, 0.75), 30, 0.8)
 	Sfx.play("hit_med", -2.0, 1.1)
 	hud.popup(Loc.t("gull_driven"), "", Color(0.9, 0.95, 1.0), 0.8)
+
+
+# ---------- 먹이 숨기기 ----------
+
+const CACHE_MAX := 3
+const CACHE_DAYS := 3
+var _cache_nodes: Array = []
+
+
+func caches() -> Array:
+	if not GameState.data.has("caches"):
+		GameState.data["caches"] = []
+	return GameState.data["caches"]
+
+
+func _cache_prey() -> void:
+	var list := caches()
+	if list.size() >= CACHE_MAX:
+		hud.notify(Loc.t("cache_full"), "info")
+		return
+	var p: Prey = falcon.drop_prey(false) as Prey
+	if p == null:
+		return
+	var pos := falcon.global_position
+	list.append({"x": pos.x, "y": pos.y, "z": pos.z, "food": p.food, "kind": p.kind, "day": int(GameState.stats().get("days", 0))})
+	p.vanish()
+	hud.popup(Loc.t("cache_done"), Loc.t("prey_" + p.kind), Color(0.85, 0.75, 0.55), 1.2)
+	Sfx.play("pluck", -6.0, 0.8)
+	Records.unlock("cache")
+	refresh_caches()
+
+
+func _cache_near(r: float = 5.0) -> int:
+	var list := caches()
+	for i in list.size():
+		var c: Dictionary = list[i]
+		if falcon.global_position.distance_to(Vector3(c.x, c.y, c.z)) < r:
+			return i
+	return -1
+
+
+func _eat_cache() -> void:
+	var i := _cache_near()
+	if i < 0:
+		return
+	var c: Dictionary = caches()[i]
+	caches().remove_at(i)
+	var fd := GameState.falcon()
+	var gain := float(c.food) * 0.9
+	fd["energy"] = minf(float(fd.get("energy", 0.0)) + gain, 100.0)
+	hud.popup(Loc.t("cache_eat"), "+%d" % int(gain), Color(0.7, 1.0, 0.6), 1.0)
+	Sfx.play("pluck", -4.0)
+	refresh_caches()
+
+
+## 오래된 먹이는 상한다
+func spoil_caches() -> void:
+	var today := int(GameState.stats().get("days", 0))
+	var keep := []
+	for c in caches():
+		if today - int(c.day) < CACHE_DAYS:
+			keep.append(c)
+	GameState.data["caches"] = keep
+	refresh_caches()
+
+
+func refresh_caches() -> void:
+	for n in _cache_nodes:
+		if is_instance_valid(n):
+			n.queue_free()
+	_cache_nodes.clear()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.55, 0.5, 0.45)
+	var sm := SphereMesh.new()
+	sm.radius = 0.12
+	sm.height = 0.14
+	sm.material = m
+	for c in caches():
+		var mi := MeshInstance3D.new()
+		mi.mesh = sm
+		add_child(mi)
+		mi.global_position = Vector3(c.x, c.y - 0.1, c.z)
+		_cache_nodes.append(mi)
+
+
+func cache_markers() -> Array:
+	var out := []
+	for c in caches():
+		var p := Vector3(c.x, c.y, c.z)
+		if p.distance_to(falcon.global_position) > 30.0:
+			out.append({"pos": p + Vector3(0, 1.0, 0), "color": Color(0.85, 0.72, 0.5), "label": Loc.t("mk_cache")})
+	return out
+
+
+# ---------- 협동 사냥 ----------
+
+func _coop_bonus() -> void:
+	gain_xp(40)
+	life._add_bond(6.0, Loc.t("bond_coop"))
+	Records.unlock("coop")
+	hud.popup(Loc.t("coop_hit"), "+40", Color(1.0, 0.7, 0.85), 1.4)
+
+
+# ---------- 포토 모드 ----------
+
+var photo: PhotoMode
 
 
 # ---------- 터치 ----------
@@ -972,6 +1095,10 @@ func _update_prompts() -> void:
 				txt = Loc.t("prompt_takeoff")
 			if falcon.carrying:
 				txt += "   " + Loc.t("prompt_eat")
+				if falcon.perch.get("kind", "") != "eyrie" and not prologue.active:
+					txt += "   " + Loc.t("prompt_cache")
+			elif _cache_near() >= 0:
+				txt += "   " + Loc.t("prompt_cache_eat")
 	var extra: String = life.prompt_extra()
 	if extra != "":
 		txt += ("   " if txt != "" else "") + extra

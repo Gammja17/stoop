@@ -303,6 +303,7 @@ func on_new_day() -> void:
 	GameState.stats()["days"] = int(GameState.stats().get("days", 0)) + 1
 	d["day"] = int(d.get("day", 1)) + 1
 	_owl_tonight = false
+	main.spoil_caches()
 	if owl and is_instance_valid(owl):
 		owl.queue_free()
 		owl = null
@@ -603,6 +604,13 @@ func on_display_dive(peak: float, rolls: int) -> void:
 func on_call() -> void:
 	if mate and is_instance_valid(mate):
 		mate.call_back()
+		# 짝이 있으면 가까운 새떼를 몰아 달라고 부른다
+		if L().mate.get("has", false) and main.falcon.is_flying() and mate.mode != MateBird.M.DRIVE:
+			var fl: Flock = main.prey_mgr.nearest_flock(main.falcon.global_position, 420.0)
+			if fl:
+				mate.start_drive(fl)
+				GameState.say(Loc.t("coop_start"), "gold")
+				return
 		if not L().mate.get("has", false) and mate.global_position.distance_to(main.falcon.global_position) < 400.0:
 			mate.follow_t = 25.0
 			if _call_cd <= 0.0:
@@ -779,6 +787,9 @@ func markers() -> Array:
 
 func prompt_extra() -> String:
 	var f: Falcon = main.falcon
+	if mate and is_instance_valid(mate) and L().mate.get("has", false) and f.is_flying() and f.carrying == null and mate.mode != MateBird.M.DRIVE:
+		if main.prey_mgr.nearest_flock(f.global_position, 420.0):
+			return Loc.t("prompt_coop")
 	if f.carrying and mate and is_instance_valid(mate) and mate.global_position.distance_to(f.global_position) < 60.0 and f.state == Falcon.State.FLYING:
 		return Loc.t("prompt_gift")
 	if f.carrying and f.state == Falcon.State.FLYING:
