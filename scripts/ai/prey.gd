@@ -47,7 +47,8 @@ var _under := false       # 잠수 중
 var _lod_n := randi() % 4
 var _lod_acc := 0.0
 
-const LOD_DIST := 700.0
+const LOD_NEAR := 350.0   # 이 안은 매 프레임
+const LOD_DIST := 900.0   # 이 밖은 8프레임마다 (사이는 3프레임마다)
 static var focus := Vector3.ZERO   # 매 위치 (PreyManager가 매 프레임 갱신)
 static var detect_mult := 1.0      # 안개 속에선 늦게 알아챈다
 
@@ -91,12 +92,14 @@ func is_loose() -> bool:
 
 func _process(delta: float) -> void:
 	# 멀리서 그냥 날아다니는 새는 가끔만 계산한다 (보이지도 않고 맞을 일도 없다)
-	if state == S.FLY and global_position.distance_squared_to(focus) > LOD_DIST * LOD_DIST:
-		_lod_acc += delta
-		_lod_n += 1
-		if _lod_n % 4 != 0:
-			return
-		delta = _lod_acc
+	if state == S.FLY:
+		var d2 := global_position.distance_squared_to(focus)
+		if d2 > LOD_NEAR * LOD_NEAR:
+			_lod_acc += delta
+			_lod_n += 1
+			if _lod_n % (8 if d2 > LOD_DIST * LOD_DIST else 3) != 0:
+				return
+			delta = _lod_acc
 	_lod_acc = 0.0
 	prev = global_position
 	juke_cd -= delta

@@ -9,6 +9,7 @@ var birds: Array = []   # {node, anim, dir, t}
 var scared := false
 var _respawn_t := 0.0
 var center := Vector3.ZERO
+var _asleep := false
 
 
 func setup(c: Vector3) -> void:
@@ -19,6 +20,7 @@ func setup(c: Vector3) -> void:
 func _spawn() -> void:
 	scared = false
 	var ps: PackedScene = load(MODEL)
+	_asleep = false
 	for i in COUNT:
 		var n: Node3D = ps.instantiate()
 		var p := center + Vector3(randf_range(-10, 10), 0, randf_range(-10, 10))
@@ -48,6 +50,17 @@ func _process(delta: float) -> void:
 		_respawn_t -= delta
 		if _respawn_t <= 0.0 and m.falcon.global_position.distance_to(center) > 300.0:
 			_spawn()
+		return
+	# 멀면 뼈대 애니메이션을 멈춘다 (보이지도 않는데 CPU만 먹는다)
+	var far := BirdModel.cam_pos.distance_squared_to(center) > 250.0 * 250.0
+	if far != _asleep:
+		_asleep = far
+		for b in birds:
+			var ap: AnimationPlayer = b.anim
+			if ap:
+				ap.active = not far
+			(b.node as Node3D).visible = not far
+	if far:
 		return
 	for b in birds:
 		b.t -= delta

@@ -274,6 +274,20 @@ text = ""
 label_settings = SubResource("ls_info")
 horizontal_alignment = 2
 
+[node name="Fps" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -260.0
+offset_top = 60.0
+offset_right = -30.0
+offset_bottom = 90.0
+grow_horizontal = 0
+text = "FPS"
+horizontal_alignment = 2
+
 [node name="Prompt" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = 7

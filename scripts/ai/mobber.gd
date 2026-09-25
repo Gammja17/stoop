@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 	if m == null:
 		return
 	var f: Falcon = m.falcon
-	if mode == M.IDLE and global_position.distance_squared_to(f.global_position) > 800.0 * 800.0:
+	if mode == M.IDLE and global_position.distance_squared_to(f.global_position) > 400.0 * 400.0:
 		_lod_acc += delta
 		_lod_n += 1
 		if _lod_n % 4 != 0:

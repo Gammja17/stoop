@@ -73,6 +73,11 @@ func _ready() -> void:
 	falcon.state = Falcon.State.PERCHED
 	falcon.input_enabled = false
 	day_night.set_time(7.2)
+	# 보통 이하 품질: 그림자를 한 단으로, 거리도 짧게 (나무를 그림자용으로 다시 그리는 양을 줄인다)
+	if Settings.quality <= 1:
+		var sun: DirectionalLight3D = $Sun
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+		sun.directional_shadow_max_distance = 260.0 if Settings.quality == 1 else 160.0
 	prey_mgr.setup(self)
 	events = EventDirector.new()
 	events.name = "Events"
@@ -228,6 +233,7 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 	world.follow_camera(camera.global_position)
+	BirdModel.cam_pos = camera.global_position
 	world.bob_boats(_t)
 	_update_screen_fx(delta)
 	_update_audio()
@@ -1025,6 +1031,9 @@ func _update_screen_fx(delta: float) -> void:
 	m.set_shader_parameter("warn", warn)
 	m.set_shader_parameter("eye", _eye)
 	m.set_shader_parameter("t", _t)
+	# 낮은 품질: 효과가 거의 없으면 전체 화면 패스를 건너뛴다
+	var busy := sp > 0.05 or _flash > 0.01 or _aberr > 0.01 or _damage > 0.01 or warn > 0.01 or g > 0.01 or _eye > 0.01 or cloud > 0.01
+	screen_fx.visible = busy or Settings.quality >= 2
 
 
 func _update_audio() -> void:

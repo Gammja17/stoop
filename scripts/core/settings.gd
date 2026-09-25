@@ -20,6 +20,7 @@ var hints := true            # 튜토리얼 힌트
 var day_minutes := 8.0       # 낮 길이(실시간 분)
 var quality := 2             # 0 낮음, 1 보통, 2 높음
 var first_person := false    # 비행 시점 (V로 전환)
+var show_fps := false         # F3
 var lang := "ko"
 
 # 각 항목: [종류, 코드]  k=키보드, m=마우스 버튼, j=패드 버튼, a=패드 축(트리거)
@@ -89,6 +90,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	match event.physical_keycode:
+		KEY_F3:
+			show_fps = not show_fps
 		KEY_F11:
 			fullscreen = not fullscreen
 			apply()
@@ -104,6 +107,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func load_settings() -> void:
 	var cf := ConfigFile.new()
+	if OS.has_feature("web"):
+		quality = 1   # 웹은 보통이 기본 (브라우저는 느리다)
 	if cf.load(PATH) != OK:
 		return
 	mouse_sens = cf.get_value("input", "mouse_sens", mouse_sens)
@@ -120,12 +125,16 @@ func load_settings() -> void:
 	hints = cf.get_value("game", "hints", hints)
 	day_minutes = cf.get_value("game", "day_minutes", day_minutes)
 	quality = cf.get_value("video", "quality", quality)
+	# 최적화 이전에 저장된 웹 설정은 한 번 보통으로 낮춘다
+	if OS.has_feature("web") and int(cf.get_value("video", "perf_rev", 0)) < 1:
+		quality = mini(quality, 1)
 	first_person = cf.get_value("video", "first_person", first_person)
 	lang = cf.get_value("game", "lang", lang)
 
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
+	cf.set_value("video", "perf_rev", 1)
 	cf.set_value("input", "mouse_sens", mouse_sens)
 	cf.set_value("input", "invert_y", invert_y)
 	cf.set_value("audio", "master", vol_master)
@@ -163,14 +172,15 @@ func apply() -> void:
 ## 그래픽 품질: 안티에일리어싱, 그림자 해상도, 렌더 배율
 func _apply_quality() -> void:
 	var vp := get_viewport()
+	var web := OS.has_feature("web")
 	match quality:
 		0:
 			vp.msaa_3d = Viewport.MSAA_DISABLED
-			vp.scaling_3d_scale = 0.75
+			vp.scaling_3d_scale = 0.7 if web else 0.75
 			RenderingServer.directional_shadow_atlas_set_size(1024, true)
 		1:
-			vp.msaa_3d = Viewport.MSAA_2X
-			vp.scaling_3d_scale = 0.9
+			vp.msaa_3d = Viewport.MSAA_DISABLED if web else Viewport.MSAA_2X
+			vp.scaling_3d_scale = 0.85 if web else 0.9
 			RenderingServer.directional_shadow_atlas_set_size(2048, true)
 		_:
 			vp.msaa_3d = Viewport.MSAA_2X

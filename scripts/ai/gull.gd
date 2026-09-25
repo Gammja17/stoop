@@ -19,6 +19,8 @@ var _harass_t := 0.0
 var _flee_t := 0.0
 var _carry_t := 0.0
 var prev := Vector3.ZERO
+var _lod_n := randi() % 4
+var _lod_acc := 0.0
 
 
 func setup(c: Vector3, spec: String = "gull") -> Gull:
@@ -39,6 +41,13 @@ func _main():
 
 
 func _process(delta: float) -> void:
+	if state == G.SOAR and global_position.distance_squared_to(BirdModel.cam_pos) > 700.0 * 700.0:
+		_lod_acc += delta
+		_lod_n += 1
+		if _lod_n % 4 != 0:
+			return
+		delta = _lod_acc
+	_lod_acc = 0.0
 	prev = global_position
 	_t += delta
 	_think -= delta

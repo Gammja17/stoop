@@ -68,10 +68,11 @@ var _lod_acc := 0.0
 
 func _process(delta: float) -> void:
 	# 먼 떼는 가끔만 계산한다
-	if alarmed_t <= 0.0 and centroid.distance_squared_to(Prey.focus) > Prey.LOD_DIST * Prey.LOD_DIST:
+	var d2 := centroid.distance_squared_to(Prey.focus)
+	if alarmed_t <= 0.0 and d2 > Prey.LOD_NEAR * Prey.LOD_NEAR:
 		_lod_acc += delta
 		_lod_n += 1
-		if _lod_n % 4 != 0:
+		if _lod_n % (8 if d2 > Prey.LOD_DIST * Prey.LOD_DIST else 3) != 0:
 			return
 		delta = _lod_acc
 	_lod_acc = 0.0

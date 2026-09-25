@@ -106,8 +106,8 @@ const S := {
 	"ctrl_view_d": ["시점 전환 (1인칭 / 3인칭)", "Toggle first / third person"],
 	"view_first": ["1인칭 시점", "First-person view"],
 	"view_third": ["3인칭 시점", "Third-person view"],
-	"ctrl_misc": ["F11 / F12", "F11 / F12"],
-	"ctrl_misc_d": ["전체 화면 전환 / 스크린샷", "Toggle fullscreen / Screenshot"],
+	"ctrl_misc": ["F3 / F11 / F12", "F3 / F11 / F12"],
+	"ctrl_misc_d": ["FPS 표시 / 전체 화면 전환 / 스크린샷", "Show FPS / Toggle fullscreen / Screenshot"],
 	"ctrl_tip": ["팁: 높이가 곧 속도다. 상승기류로 높이 올라간 뒤 날개를 접고, ◇ 예측 지점을 노려라. 위에서 뒤로 내리꽂으면 먹잇감이 거의 알아채지 못한다. 방향을 틀 때마다 속도를 잃으니 처음부터 잘 겨눠라.", "Tip: altitude is speed. Climb in a thermal, tuck, and aim for the ◇ lead mark. Prey rarely sees a stoop from above and behind. Every correction bleeds speed, so aim early."],
 	# HUD
 	"hud_hp": ["체력", "Health"],

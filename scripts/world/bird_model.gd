@@ -106,6 +106,9 @@ const SPECS := {
 }
 
 const VISUAL := 1.5   # 실제보다 크게 보여 줘서 먼 곳의 새도 읽히게 한다
+const LOD_DIST := 70.0   # 이보다 멀면 날개 관절 대신 한 덩어리 메시 (그리기 호출 7→1)
+
+static var cam_pos := Vector3.ZERO   # 카메라 위치 (Main이 매 프레임 갱신)
 
 static var _cache: Dictionary = {}
 static var _mat: StandardMaterial3D
@@ -128,6 +131,7 @@ var tail_spread := 0.0
 var talons_out := 0.0
 var perched := 0.0
 var _body_hidden := false
+var _far: MeshInstance3D
 
 
 static func resolve(id: String) -> Dictionary:
@@ -180,13 +184,21 @@ func setup(id: String, extra_scale: float = 1.0) -> BirdModel:
 		else:
 			shoulder_r = sh
 			wrist_r = wr
+	_far = MeshInstance3D.new()
+	_far.mesh = m["far"]
+	_far.visibility_range_begin = LOD_DIST
+	_far.visibility_range_begin_margin = 4.0
+	_far.visibility_range_end = 900.0
+	_far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_far)
 	return self
 
 
 func _mi(parent: Node3D, mesh: Mesh) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
-	mi.visibility_range_end = 900.0
+	mi.visibility_range_end = LOD_DIST
+	mi.visibility_range_end_margin = 4.0
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	parent.add_child(mi)
 
@@ -200,11 +212,16 @@ func set_body_visible(v: bool) -> void:
 		if c is MeshInstance3D:
 			(c as MeshInstance3D).visible = v
 	tail_node.visible = v
+	if _far:
+		_far.visible = v
 
 
 ## 매 프레임 포즈 적용
 func pose(delta: float) -> void:
 	if shoulder_l == null:
+		return
+	# 멀면 관절이 안 보이므로 계산하지 않는다
+	if global_position.distance_squared_to(cam_pos) > LOD_DIST * LOD_DIST * 1.2:
 		return
 	var f := fold
 	var flap := sin(flap_phase) * flap_amp
@@ -242,7 +259,23 @@ func _build_meshes() -> Dictionary:
 	out["arm_l"] = _wing_part(false, -1)
 	out["hand_r"] = _wing_part(true, 1)
 	out["hand_l"] = _wing_part(true, -1)
+	out["far"] = _far_mesh(out)
 	return out
+
+
+## 멀리서 쓰는 한 덩어리: 몸통 + 꼬리 + 펼친 날개
+func _far_mesh(parts: Dictionary) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.append_from(parts["body"], 0, Transform3D.IDENTITY)
+	st.append_from(parts["tail"], 0, Transform3D(Basis.IDENTITY, Vector3(0, 0.01, 0.12 * s["body"])))
+	for side: int in [-1, 1]:
+		var sh := Transform3D(Basis(Vector3.FORWARD, deg_to_rad(6.0) * side), Vector3(0.045 * side * s["body"], 0.03, -0.04))
+		st.append_from(parts["arm_r"] if side > 0 else parts["arm_l"], 0, sh)
+		st.append_from(parts["hand_r"] if side > 0 else parts["hand_l"], 0, sh * Transform3D(Basis.IDENTITY, Vector3(s["arm"] * side, 0, 0)))
+	var m := st.commit()
+	m.surface_set_material(0, _mat)
+	return m
 
 
 func _st() -> SurfaceTool:

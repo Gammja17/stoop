@@ -7,13 +7,14 @@ const NATURE := "res://assets/models/nature/"
 const PIRATE := "res://assets/models/pirate/"
 const BOATS := "res://assets/models/boats/"
 
-const CHUNK := 25   # 청크당 셀 수
+const CHUNK := 50   # 청크당 셀 수 (크게 묶어 그리기 호출을 줄인다)
+const VEG_CELL := 700.0   # 식생을 이 크기 구역으로 나눠 멀리·화면 밖 구역은 그리지 않는다
 
 var terrain_mat: ShaderMaterial
 var rock_mat: ShaderMaterial
 var water: MeshInstance3D
 var water_mat: ShaderMaterial
-var deciduous: Array = []          # [{mm: MultiMeshInstance3D, green: Mesh, fall: Mesh}]
+var deciduous: Array = []          # [{mms: [MultiMeshInstance3D], green: Mesh, fall: Mesh}]
 var boats: Array[Node3D] = []
 var clouds: Array = []             # {pos, r}
 var thermal_cols: Array[MeshInstance3D] = []
@@ -512,22 +513,37 @@ static func naturalize(mesh: Mesh) -> void:
 			mat.set_meta("natural", true)
 
 
-func _mm(parts: Array, xforms: Array, cast: bool = true) -> MultiMeshInstance3D:
+## 같은 모델을 구역별 멀티메시로 나눈다. 구역마다 따로 컬링·LOD가 된다.
+## vis: 이 거리 밖 구역은 그리지 않는다. 품질이 낮으면 개수를 줄인다.
+func _mm(parts: Array, xforms: Array, cast: bool = true, vis: float = 1500.0) -> Array:
 	var mesh: Mesh = parts[0][0]
 	naturalize(mesh)
 	var base: Transform3D = parts[0][1]
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = xforms.size()
-	for i in xforms.size():
-		mm.set_instance_transform(i, (xforms[i] as Transform3D) * base)
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mmi.visibility_range_end = 3500.0   # 멀티메시 AABB 중심 기준이라 섬까지 넉넉히
-	add_child(mmi)
-	return mmi
+	var density: float = [0.45, 0.7, 1.0][clampi(Settings.quality, 0, 2)]
+	var cells := {}
+	for xf: Transform3D in xforms:
+		if density < 1.0 and _rng.randf() > density:
+			continue
+		var key := Vector2i(floori(xf.origin.x / VEG_CELL), floori(xf.origin.z / VEG_CELL))
+		if not cells.has(key):
+			cells[key] = []
+		cells[key].append(xf)
+	var out := []
+	for key in cells:
+		var list: Array = cells[key]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i, (list[i] as Transform3D) * base)
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mmi.visibility_range_end = vis + VEG_CELL * 0.7   # 구역 중심 기준
+		add_child(mmi)
+		out.append(mmi)
+	return out
 
 
 func _build_vegetation() -> void:
@@ -594,21 +610,21 @@ func _build_vegetation() -> void:
 	_island_vegetation(pines, bushes, rocks, pine_x, bush_x, rock_x)
 	for p in pines:
 		if pine_x[p].size() > 0:
-			_mm(glb_parts(NATURE + p), pine_x[p])
+			_mm(glb_parts(NATURE + p), pine_x[p], true, 1600.0)
 	for d in decid:
 		if dec_x[d[0]].size() > 0:
 			var green := glb_parts(NATURE + d[0])
 			var fall := glb_parts(NATURE + d[1])
 			naturalize(fall[0][0])
-			var mmi := _mm(green, dec_x[d[0]])
-			deciduous.append({"mm": mmi, "green": green[0][0], "fall": fall[0][0]})
+			var mms := _mm(green, dec_x[d[0]], true, 1600.0)
+			deciduous.append({"mms": mms, "green": green[0][0], "fall": fall[0][0]})
 	for b in bushes:
 		if bush_x[b].size() > 0:
-			_mm(glb_parts(NATURE + b), bush_x[b], false)
+			_mm(glb_parts(NATURE + b), bush_x[b], false, 500.0)
 	for r in rocks:
 		if rock_x[r].size() > 0:
-			var mmi := _mm(glb_parts(NATURE + r), rock_x[r])
-			mmi.material_override = rock_mat
+			for mmi in _mm(glb_parts(NATURE + r), rock_x[r], true, 1000.0):
+				mmi.material_override = rock_mat
 
 
 func _island_vegetation(pines: Array, bushes: Array, rocks: Array, pine_x: Dictionary, bush_x: Dictionary, rock_x: Dictionary) -> void:
@@ -650,13 +666,14 @@ func _island_vegetation(pines: Array, bushes: Array, rocks: Array, pine_x: Dicti
 							log_x.append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.5, 4.0)))
 			z += step
 	if log_x.size() > 0:
-		_mm(glb_parts(NATURE + "log.glb"), log_x)
+		_mm(glb_parts(NATURE + "log.glb"), log_x, false, 600.0)
 
 
 func set_season(season: int) -> void:
 	var autumn := season == 2 or season == 3
 	for d in deciduous:
-		(d.mm as MultiMeshInstance3D).multimesh.mesh = d.fall if autumn else d.green
+		for mmi: MultiMeshInstance3D in d.mms:
+			mmi.multimesh.mesh = d.fall if autumn else d.green
 	terrain_mat.set_shader_parameter("autumn", 1.0 if season == 2 else (0.6 if season == 3 else 0.0))
 	terrain_mat.set_shader_parameter("summer", 1.0 if season == 1 else 0.0)
 
@@ -730,21 +747,26 @@ func _build_clouds() -> void:
 	sm.radial_segments = 10
 	sm.rings = 6
 	sm.material = mat
+	var xs := []
 	for i in 40:
 		var c := Vector3(_rng.randf_range(-1300, 2900), _rng.randf_range(300, 520), _rng.randf_range(-1300, 1300))
-		var root := Node3D.new()
-		root.position = c
-		add_child(root)
 		var r := _rng.randf_range(30.0, 60.0)
 		for k in _rng.randi_range(4, 7):
-			var mi := MeshInstance3D.new()
-			mi.mesh = sm
 			var rr := r * _rng.randf_range(0.5, 1.0)
-			mi.scale = Vector3(rr, rr * 0.6, rr)
-			mi.position = Vector3(_rng.randf_range(-r, r), _rng.randf_range(-r * 0.15, r * 0.2), _rng.randf_range(-r * 0.7, r * 0.7))
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			root.add_child(mi)
-		clouds.append({"pos": c, "r": r * 1.3, "node": root})
+			var pos := c + Vector3(_rng.randf_range(-r, r), _rng.randf_range(-r * 0.15, r * 0.2), _rng.randf_range(-r * 0.7, r * 0.7))
+			xs.append(Transform3D(Basis.from_scale(Vector3(rr, rr * 0.6, rr)), pos))
+		clouds.append({"pos": c, "r": r * 1.3})
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = sm
+	mm.instance_count = xs.size()
+	for j in xs.size():
+		mm.set_instance_transform(j, xs[j])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mmi.name = "Clouds"
+	add_child(mmi)
 
 
 ## 카메라가 구름 속이면 0..1
