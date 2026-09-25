@@ -14,6 +14,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/map_screen.tscn" id="12_map_screen"]
 [ext_resource type="PackedScene" path="res://scenes/ui/records_screen.tscn" id="13_records_screen"]
 [ext_resource type="PackedScene" path="res://scenes/ui/growth_screen.tscn" id="14_growth_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/multi_screen.tscn" id="15_multi_screen"]
 
 [node name="Menus" type="Control"]
 process_mode = 3
@@ -75,5 +76,9 @@ visible = false
 layout_mode = 1
 
 [node name="Growth" parent="." instance=ExtResource("14_growth_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Multi" parent="." instance=ExtResource("15_multi_screen")]
 visible = false
 layout_mode = 1

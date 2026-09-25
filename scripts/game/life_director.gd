@@ -723,6 +723,9 @@ func _refresh_objectives() -> void:
 	var lg: Dictionary = main.legend.objective()
 	if not lg.is_empty():
 		items.append(lg)
+	var mp: Dictionary = Net.objective()
+	if not mp.is_empty():
+		items.append(mp)
 	var l := L()
 	var s := season()
 	var fd := GameState.falcon()

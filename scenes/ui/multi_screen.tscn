@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/ui/multi_screen.gd" id="1_script"]
 [ext_resource type="FontFile" path="res://assets/fonts/BlackHanSans-Regular.ttf" id="2_big"]
 
 [sub_resource type="LabelSettings" id="ls_title"]
@@ -14,7 +14,7 @@ outline_color = Color(0, 0, 0, 0.5)
 font_size = 22
 font_color = Color(0.9, 0.92, 0.94, 1)
 
-[node name="Pause" type="Control"]
+[node name="Multi" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -41,7 +41,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="Center"]
-custom_minimum_size = Vector2(520, 0)
+custom_minimum_size = Vector2(760, 0)
 layout_mode = 2
 
 [node name="VBox" type="VBoxContainer" parent="Center/Panel"]
@@ -54,42 +54,60 @@ text = "TITLE"
 label_settings = SubResource("ls_title")
 horizontal_alignment = 1
 
-[node name="Resume" type="Button" parent="Center/Panel/VBox"]
+[node name="Note" type="Label" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(700, 0)
 layout_mode = 2
-text = "Resume"
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
 
-[node name="Map" type="Button" parent="Center/Panel/VBox"]
+[node name="Row" type="HBoxContainer" parent="Center/Panel/VBox"]
 layout_mode = 2
-text = "Map"
+theme_override_constants/separation = 12
 
-[node name="Growth" type="Button" parent="Center/Panel/VBox"]
+[node name="Host" type="Button" parent="Center/Panel/VBox/Row"]
 layout_mode = 2
-text = "Growth"
+size_flags_horizontal = 3
+text = "Host"
 
-[node name="Multi" type="Button" parent="Center/Panel/VBox"]
+[node name="Code" type="LineEdit" parent="Center/Panel/VBox/Row"]
+custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
-text = "Multi"
+max_length = 4
+alignment = 1
 
-[node name="Records" type="Button" parent="Center/Panel/VBox"]
+[node name="Join" type="Button" parent="Center/Panel/VBox/Row"]
 layout_mode = 2
-text = "Records"
+size_flags_horizontal = 3
+text = "Join"
 
-[node name="Settings" type="Button" parent="Center/Panel/VBox"]
+[node name="Status" type="Label" parent="Center/Panel/VBox"]
 layout_mode = 2
-text = "Settings"
+text = ""
+label_settings = SubResource("ls_body")
+horizontal_alignment = 1
 
-[node name="Controls" type="Button" parent="Center/Panel/VBox"]
+[node name="Link" type="Label" parent="Center/Panel/VBox"]
 layout_mode = 2
-text = "Controls"
+text = ""
+horizontal_alignment = 1
 
-[node name="SkipTut" type="Button" parent="Center/Panel/VBox"]
+[node name="Players" type="Label" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(700, 0)
 layout_mode = 2
-text = "SkipTut"
+text = ""
+label_settings = SubResource("ls_body")
+horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="SaveQuit" type="Button" parent="Center/Panel/VBox"]
+[node name="Copy" type="Button" parent="Center/Panel/VBox"]
 layout_mode = 2
-text = "SaveQuit"
+text = "Copy"
 
-[node name="QuitGame" type="Button" parent="Center/Panel/VBox"]
+[node name="Leave" type="Button" parent="Center/Panel/VBox"]
 layout_mode = 2
-text = "QuitGame"
+text = "Leave"
+
+[node name="Back" type="Button" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Back"

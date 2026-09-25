@@ -85,6 +85,7 @@ func _ready() -> void:
 	events.setup(self)
 	if TouchControls.wanted():
 		_enable_touch()
+	Net.main = self
 	photo = load("res://scenes/ui/photo_mode.tscn").instantiate()
 	photo.main = self
 	$MenuLayer.add_child(photo)
@@ -157,6 +158,7 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	events.reset()
 	legend.restore()
 	refresh_caches()
+	Net.on_game_started()
 	Sfx.music_gain = 0.0
 	var pro := int(GameState.data.get("prologue", -1))
 	if pro >= 0:
@@ -214,6 +216,7 @@ func finish_prologue() -> void:
 
 func quit_to_title() -> void:
 	playing = false
+	Net.leave()
 	legend.clear()
 	events.reset()
 	get_tree().paused = false
@@ -262,7 +265,7 @@ func _process(delta: float) -> void:
 		events.update(delta)
 		legend.update(delta)
 	hud.update_hud(self, delta)
-	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers() + legend.markers() + cache_markers()
+	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers() + legend.markers() + cache_markers() + Net.markers()
 	_check_islands(delta)
 	_update_music(delta)
 	camera.eye_zoom = _eye
@@ -316,6 +319,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_drop()
 	elif event.is_action_pressed("call"):
 		Sfx.play("call", -2.0, randf_range(0.95, 1.05))
+		Net.send_fx("call", falcon.global_position)
 		life.on_call()
 
 
@@ -932,6 +936,7 @@ func fox_pounce(fx: Fox) -> void:
 ## 타격감의 핵심: 멈춤(히트스톱) → 슬로모션 → 복귀
 func _strike_juice(p: Prey, kmh: float, perfect: bool, xp: int = 0) -> void:
 	_mus_after_hit = 6.0
+	Net.send_fx("strike", p.global_position)
 	var k := clampf((kmh - 80.0) / 220.0, 0.0, 1.0)
 	var pos := p.global_position
 	var sp: Dictionary = p.model.s

@@ -33,6 +33,7 @@ const LIST := [
 	["shichimi", "시치미", "Shichimi", "매사냥꾼의 미끼를 낚아채고 시치미를 받는다", "Snatch the falconer's lure and earn a leg tag"],
 	["cache", "비상식량", "Rainy Day", "먹이를 숨겨 둔다", "Cache prey for later"],
 	["migration", "대이동", "Great Migration", "가을 철새 떼와 먼 바다까지 함께 난다", "Fly with the autumn migration"],
+	["together", "함께 나는 하늘", "Shared Sky", "다른 플레이어와 함께 난다", "Fly with another player"],
 	["legend", "해동청", "Haedongcheong", "전설의 흰 매에게 인정받는다", "Earn the respect of the legendary white falcon"],
 ]
 

@@ -17,6 +17,7 @@ var _return_to := ""
 @onready var map = $Map
 @onready var records = $Records
 @onready var growth = $Growth
+@onready var multi = $Multi
 
 
 func _ready() -> void:
@@ -106,6 +107,13 @@ func open_growth(from: String) -> void:
 	_hide_all()
 	growth.open()
 	Sfx.play("ui_open", -6.0)
+
+
+func open_multi(from: String) -> void:
+	_return_to = from
+	_pause_game()
+	_hide_all()
+	multi.open()
 
 
 func open_credits() -> void:

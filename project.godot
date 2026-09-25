@@ -26,6 +26,7 @@ Settings="*res://scripts/core/settings.gd"
 GameState="*res://scripts/core/game_state.gd"
 Sfx="*res://scripts/core/sfx.gd"
 Records="*res://scripts/core/records.gd"
+Net="*res://scripts/net/net.gd"
 
 [display]
 

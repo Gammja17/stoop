@@ -138,7 +138,7 @@ def main():
 
     # 일시정지
     s = panel_scene("res://scripts/ui/pause_menu.gd", "Pause", 520)
-    for b in ["Resume", "Map", "Growth", "Records", "Settings", "Controls", "SkipTut", "SaveQuit", "QuitGame"]:
+    for b in ["Resume", "Map", "Growth", "Multi", "Records", "Settings", "Controls", "SkipTut", "SaveQuit", "QuitGame"]:
         btn(s, b)
     s.write("pause_menu.tscn")
 
@@ -186,6 +186,21 @@ def main():
     btn(s, "Back")
     s.write("growth_screen.tscn")
 
+    # 함께 날기(멀티)
+    s = panel_scene("res://scripts/ui/multi_screen.gd", "Multi", 760)
+    s.node("Note", "Label", V, custom_minimum_size="Vector2(700, 0)", layout_mode=2, text="", label_settings='SubResource("ls_body")', autowrap_mode=3)
+    s.node("Row", "HBoxContainer", V, layout_mode=2, theme_override_constants__separation=12)
+    s.node("Host", "Button", V + "/Row", layout_mode=2, size_flags_horizontal=3, text="Host")
+    s.node("Code", "LineEdit", V + "/Row", custom_minimum_size="Vector2(160, 0)", layout_mode=2, max_length=4, alignment=1)
+    s.node("Join", "Button", V + "/Row", layout_mode=2, size_flags_horizontal=3, text="Join")
+    s.node("Status", "Label", V, layout_mode=2, text="", label_settings='SubResource("ls_body")', horizontal_alignment=1)
+    s.node("Link", "Label", V, layout_mode=2, text="", horizontal_alignment=1)
+    s.node("Players", "Label", V, custom_minimum_size="Vector2(700, 0)", layout_mode=2, text="", label_settings='SubResource("ls_body")', horizontal_alignment=1, autowrap_mode=3)
+    btn(s, "Copy")
+    btn(s, "Leave")
+    btn(s, "Back")
+    s.write("multi_screen.tscn")
+
     # 둥지(휴식)
     s = panel_scene("res://scripts/ui/rest_menu.gd", "Rest", 620)
     s.node("Status", "Label", V, custom_minimum_size="Vector2(560, 0)", layout_mode=2, text="", label_settings='SubResource("ls_body")', autowrap_mode=3)
@@ -226,11 +241,11 @@ def main():
 
     # 메뉴 묶음
     out = ["[gd_scene format=3]", "", '[ext_resource type="Script" path="res://scripts/ui/menus.gd" id="1_script"]']
-    names = ["loading", "title_menu", "new_game_menu", "pause_menu", "settings_menu", "controls_screen", "credits_screen", "rest_menu", "summary_screen", "death_screen", "map_screen", "records_screen", "growth_screen"]
+    names = ["loading", "title_menu", "new_game_menu", "pause_menu", "settings_menu", "controls_screen", "credits_screen", "rest_menu", "summary_screen", "death_screen", "map_screen", "records_screen", "growth_screen", "multi_screen"]
     for i, n in enumerate(names):
         out.append(f'[ext_resource type="PackedScene" path="res://scenes/ui/{n}.tscn" id="{i + 2}_{n}"]')
     out += ["", '[node name="Menus" type="Control"]', "process_mode = 3", "layout_mode = 3", "anchors_preset = 15", "anchor_right = 1.0", "anchor_bottom = 1.0", "grow_horizontal = 2", "grow_vertical = 2", "mouse_filter = 2", 'script = ExtResource("1_script")', ""]
-    node_names = ["Loading", "Title", "NewGame", "Pause", "Settings", "Controls", "Credits", "Rest", "Summary", "Death", "Map", "Records", "Growth"]
+    node_names = ["Loading", "Title", "NewGame", "Pause", "Settings", "Controls", "Credits", "Rest", "Summary", "Death", "Map", "Records", "Growth", "Multi"]
     for i, (n, nn) in enumerate(zip(names, node_names)):
         out += [f'[node name="{nn}" parent="." instance=ExtResource("{i + 2}_{n}")]', "visible = false", "layout_mode = 1", ""]
     with open(os.path.join(ROOT, "menus.tscn"), "w", encoding="utf-8") as f:
