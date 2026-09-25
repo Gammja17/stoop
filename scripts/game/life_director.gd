@@ -99,7 +99,7 @@ func _check_combat() -> void:
 	var a := f._prev_pos
 	var b := f.global_position
 	if rival and is_instance_valid(rival) and rival.mode != RivalFalcon.R.LEAVE:
-		if PreyManager.seg_dist(a - rival.prev, b - rival.global_position) < 2.8 and f.speed > 24.0:
+		if PreyManager.seg_dist(a - rival.prev, b - rival.global_position) < 4.5 and f.speed > 18.0:
 			rival.take_hit(f.velocity)
 			L()["rival_hits"] = rival.hits
 			_combat_juice(rival.global_position, "rival")
@@ -233,7 +233,7 @@ func _spawn_mate(paired: bool) -> void:
 func _spawn_rival() -> void:
 	if rival and is_instance_valid(rival):
 		return
-	var need := 3 + mini(int(GameState.data.get("year", 1)) / 2, 2)
+	var need := 2 + mini(int(GameState.data.get("year", 1)) / 2, 2)
 	rival = RivalFalcon.new().setup(WorldShape.eyrie + Vector3(150, 140, 80), need)
 	main.add_child(rival)
 	rival.hit_player.connect(_on_rival_hit_player)
@@ -614,7 +614,7 @@ func _on_lesson(success: bool, fl: Fledgling) -> void:
 
 func _on_rival_hit_player() -> void:
 	var f: Falcon = main.falcon
-	main.damage(12.0, "rival")
+	main.damage(7.0, "rival")
 	f.speed *= 0.55
 	f.dir = (f.dir + Vector3(randf_range(-0.5, 0.5), -0.4, randf_range(-0.5, 0.5))).normalized()
 	main.camera.add_trauma(0.8)
@@ -719,7 +719,13 @@ func markers() -> Array:
 	if mate and is_instance_valid(mate) and mate.global_position.distance_to(f.global_position) > 60.0 and not (mate.mode == MateBird.M.NEST and mate.perched):
 		out.append({"pos": mate.global_position, "color": Color(1.0, 0.55, 0.75), "label": Loc.t("mk_mate")})
 	if rival and is_instance_valid(rival) and rival.mode != RivalFalcon.R.LEAVE:
-		out.append({"pos": rival.global_position, "color": Color(1.0, 0.3, 0.25), "label": Loc.t("mk_rival")})
+		if rival.vulnerable():
+			out.append({"pos": rival.global_position, "color": Color(1.0, 0.85, 0.2), "label": Loc.t("mk_rival_open")})
+			if not rival.hinted:
+				rival.hinted = true
+				GameState.say(Loc.t("rival_open"), "gold")
+		else:
+			out.append({"pos": rival.global_position, "color": Color(1.0, 0.3, 0.25), "label": Loc.t("mk_rival")})
 	if owl and is_instance_valid(owl) and owl.mode != OwlRaider.O.FLEE:
 		out.append({"pos": owl.global_position, "color": Color(1.0, 0.3, 0.25), "label": Loc.t("mk_owl")})
 	for fl in fledglings:

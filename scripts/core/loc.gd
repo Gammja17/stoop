@@ -197,8 +197,10 @@ const S := {
 	"starving": ["굶주리고 있다! 체력이 줄어든다", "Starving! Losing health"],
 	"great_dive": ["멋진 급강하! %d km/h", "Great stoop! %d km/h"],
 	# 영역/짝
-	"rival_appears": ["침입자 매가 둥지 절벽을 노린다! 부딪혀 쫓아내라", "An intruder falcon wants your cliff! Strike it to drive it off"],
-	"rival_attack": ["위에서 급강하 공격! 옆으로 피해라", "Stoop from above! Dodge sideways"],
+	"rival_appears": ["침입자 매가 둥지 절벽을 노린다! 상승기류로 녀석보다 높이 올라가 들이받아라", "An intruder falcon wants your cliff! Climb a thermal above it and strike"],
+	"rival_attack": ["위에서 급강하 공격! 옆으로 피해라(A/D)", "Stoop from above! Dodge sideways (A/D)"],
+	"rival_open": ["침입자가 급강하 뒤 느려졌다 — 지금 들이받아라!", "The intruder is slow after its stoop — strike now!"],
+	"mk_rival_open": ["지금 공격!", "Strike now!"],
 	"hit_rival": ["적중!", "Hit!"],
 	"got_hit": ["공격당했다!", "You were struck!"],
 	"territory_won": ["영역을 지켜냈다!", "Territory held!"],

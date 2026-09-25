@@ -39,8 +39,8 @@ var velocity := Vector3.ZERO
 var aim_yaw := 0.0
 var aim_pitch := 0.0
 var tuck := 0.0
-var stamina := 100.0
-var max_stamina := 100.0
+var stamina := 160.0
+var max_stamina := 160.0
 var flapping := false
 var braking := false
 var bank := 0.0
@@ -101,7 +101,7 @@ func apply_stats() -> void:
 	var age := int(f.get("age", 1))
 	var lifespan := int(f.get("lifespan", 6))
 	var old := clampf(float(age - (lifespan - 2)) * 0.12, 0.0, 0.3)
-	max_stamina = 100.0 + float(f.get("bonus_stamina", 0.0)) - old * 60.0
+	max_stamina = 160.0 + float(f.get("bonus_stamina", 0.0)) - old * 60.0
 
 
 func aim_dir() -> Vector3:
@@ -257,11 +257,11 @@ func _fly(delta: float) -> void:
 	if inp.flap and tuck < 0.35 and stamina > 0.5:
 		var lim := FLAP_MAX * speed_mult * (1.0 - carry_w * 0.25)
 		flapping = true
-		stamina -= 19.0 * delta
+		stamina -= 12.0 * delta
 		if speed < lim:
 			acc += FLAP_ACCEL * (1.0 - carry_w * 0.45)
 	else:
-		var regen := 11.0 if GameState.falcon().get("energy", 50.0) > 20.0 else 5.0
+		var regen := 18.0 if GameState.falcon().get("energy", 50.0) > 20.0 else 8.0
 		stamina = minf(stamina + regen * delta, max_stamina)
 	speed = maxf(speed + acc * delta, 0.0)
 	# 실속
