@@ -450,7 +450,7 @@ static func _compute_features() -> void:
 	thermals.clear()
 	for tp in [Vector2(-420, -620), Vector2(-700, 150), Vector2(-380, 520), Vector2(-260, 950), Vector2(-900, -300), Vector2(-150, -150)]:
 		var gy := ground(tp.x, tp.y)
-		thermals.append({"pos": Vector3(tp.x, gy, tp.y), "r": rng.randf_range(70.0, 90.0), "power": rng.randf_range(7.5, 10.5)})
+		thermals.append({"pos": Vector3(tp.x, gy, tp.y), "r": rng.randf_range(70.0, 90.0), "power": rng.randf_range(27.0, 31.0)})
 	# 앉을 곳
 	perches.clear()
 	perches.append({"pos": eyrie, "kind": "eyrie", "facing": eyrie_facing})

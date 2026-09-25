@@ -889,8 +889,8 @@ func _update_screen_fx(delta: float) -> void:
 		var vy := falcon.velocity.y
 		if vy < -12.0:
 			var tti := above / -vy
-			warn = clampf(1.0 - tti / 1.6, 0.0, 1.0)
-		g = clampf((falcon.g_load - 5.0) / 7.0, 0.0, 0.75)
+			warn = clampf(1.0 - tti / 3.0, 0.0, 1.0)   # 3초 전부터 경고
+		g = clampf((falcon.g_load - 7.0) / 10.0, 0.0, 0.6)
 	if warn > 0.4:
 		_heart_t -= real_dt
 		if _heart_t <= 0.0:

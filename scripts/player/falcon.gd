@@ -24,7 +24,7 @@ const FLAP_MAX := 30.0
 const TURN_OPEN := 2.35
 const TURN_TUCK := 0.8
 const TURN_BLEED := 0.14
-const G_OPEN := 85.0      # 날개 편 상태 최대 선회 가속도 (m/s²)
+const G_OPEN := 170.0     # 날개 편 상태 최대 선회 가속도 (m/s²). 크게 잡아서 급강하 뒤 빠져나오기 쉽게
 const G_TUCK := 42.0      # 날개 접은 상태
 const ASSIST_RANGE := 30.0   # 조준 보조가 작동하는 거리
 const ASSIST_RATE := 0.55    # 조준 보조 최대 회전 (rad/s)
@@ -366,7 +366,8 @@ func _compute_updraft() -> float:
 		if d < r * 1.35 and p.y < tp.y + 650.0:
 			var k := 1.0 - smoothstep(r * 0.75, r * 1.35, d)
 			var top := 1.0 - smoothstep(tp.y + 450.0, tp.y + 650.0, p.y)
-			up = maxf(up, float(t.power) * k * top * (0.35 + 0.65 * tf))
+			# 아침·저녁에도 거의 제 힘을 낸다 (시간대 영향은 20%만)
+			up = maxf(up, float(t.power) * k * top * (0.8 + 0.2 * tf))
 			if k > 0.3:
 				in_thermal = true
 			if k * top > thermal_k:
