@@ -7,6 +7,7 @@ extends Node3D
 @onready var camera: ChaseCamera = $Camera
 @onready var prey_mgr: PreyManager = $PreyManager
 var events: EventDirector
+var legend: LegendQuest
 @onready var life: LifeDirector = $Life
 @onready var streaks: SpeedStreaks = $Streaks
 @onready var fx_root: Node3D = $FX
@@ -77,6 +78,10 @@ func _ready() -> void:
 	events.name = "Events"
 	add_child(events)
 	events.setup(self)
+	legend = LegendQuest.new()
+	legend.name = "Legend"
+	add_child(legend)
+	legend.setup(self)
 	life.setup(self)
 	prologue.setup(self, dialog)
 	camera.cine_center = WorldShape.eyrie
@@ -139,6 +144,7 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	Sfx.music("calm", 4.0)
 	_mus_state = "calm"
 	events.reset()
+	legend.restore()
 	Sfx.music_gain = 0.0
 	var pro := int(GameState.data.get("prologue", -1))
 	if pro >= 0:
@@ -194,6 +200,8 @@ func finish_prologue() -> void:
 
 func quit_to_title() -> void:
 	playing = false
+	legend.clear()
+	events.reset()
 	get_tree().paused = false
 	Engine.time_scale = 1.0
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -237,8 +245,9 @@ func _process(delta: float) -> void:
 	if not prologue.active:
 		life.update(delta)
 		events.update(delta)
+		legend.update(delta)
 	hud.update_hud(self, delta)
-	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers()
+	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers() + legend.markers()
 	_check_islands(delta)
 	_update_music(delta)
 	camera.eye_zoom = _eye

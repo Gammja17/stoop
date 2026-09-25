@@ -29,6 +29,7 @@ const LIST := [
 	["eagle", "거인에 맞서", "Giant Slayer", "흰꼬리수리를 들이받아 쫓아낸다", "Ram a white-tailed eagle away"],
 	["golden", "황금 사냥", "Golden Hunt", "황금 비둘기를 잡는다", "Catch the golden pigeon"],
 	["challenger", "도전자", "Challenger", "돌발 도전 10번 성공", "Win 10 challenges"],
+	["legend", "해동청", "Haedongcheong", "전설의 흰 매에게 인정받는다", "Earn the respect of the legendary white falcon"],
 ]
 
 var _done := {}
