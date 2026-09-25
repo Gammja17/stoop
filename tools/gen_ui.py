@@ -204,7 +204,7 @@ def main():
     s.node("VBox", "VBoxContainer", "Center", layout_mode=2, theme_override_constants__separation=10)
     s.node("Title", "Label", "Center/VBox", layout_mode=2, text="지도", label_settings='SubResource("ls_title")', horizontal_alignment=1)
     s.node("Frame", "PanelContainer", "Center/VBox", layout_mode=2)
-    s.node("Image", "TextureRect", "Center/VBox/Frame", custom_minimum_size="Vector2(820, 820)", layout_mode=2, expand_mode=1, stretch_mode=5)
+    s.node("Image", "TextureRect", "Center/VBox/Frame", custom_minimum_size="Vector2(1320, 840)", layout_mode=2, expand_mode=1, stretch_mode=5)
     s.node("Overlay", "Control", "Center/VBox/Frame/Image", **FULL, mouse_filter=2, script='ExtResource("3_overlay")')
     s.node("Hint", "Label", "Center/VBox", layout_mode=2, text="", horizontal_alignment=1)
     s.write("map_screen.tscn")

@@ -51,7 +51,7 @@ horizontal_alignment = 1
 layout_mode = 2
 
 [node name="Image" type="TextureRect" parent="Center/VBox/Frame"]
-custom_minimum_size = Vector2(820, 820)
+custom_minimum_size = Vector2(1320, 840)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5

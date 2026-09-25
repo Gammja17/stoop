@@ -29,6 +29,8 @@ const G_TUCK := 42.0      # 날개 접은 상태
 const ASSIST_RANGE := 30.0   # 조준 보조가 작동하는 거리
 const ASSIST_RATE := 0.55    # 조준 보조 최대 회전 (rad/s)
 const MOUSE_K := 0.0022
+const KEY_TURN := 1.3        # A/D 선회 속도 (rad/s)
+const DOUBLE_TAP := 0.3      # 이 안에 두 번 누르면 구르기
 
 var state := State.FROZEN
 var dir := Vector3.FORWARD
@@ -53,6 +55,12 @@ var perch: Dictionary = {}
 var input_enabled := true
 var eye_active := false
 var assist_target: Node3D = null
+var auto_circle := false     # 상승기류 안에서 손을 떼면 알아서 돈다
+var thermal_here: Dictionary = {}
+var thermal_k := 0.0
+var _aim_idle := 0.0         # 마지막 조준 입력 뒤 지난 시간
+var _circle_sign := 0.0
+var _tap_t := {"l": -1.0, "r": -1.0}
 
 var speed_mult := 1.0
 var agility_mult := 1.0
@@ -112,6 +120,7 @@ func spawn_flying(pos: Vector3, heading: Vector3, spd: float) -> void:
 	set_heading(heading)
 	speed = spd
 	state = State.FLYING
+	_aim_idle = 0.0
 	tuck = 0.0
 
 
@@ -131,6 +140,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var k := MOUSE_K * Settings.mouse_sens * (0.45 if eye_active else 1.0)
 		aim_yaw -= event.relative.x * k
+		if event.relative.length() > 0.5:
+			_aim_idle = 0.0
 		var dy: float = event.relative.y * k
 		aim_pitch -= -dy if Settings.invert_y else dy
 		aim_pitch = clampf(aim_pitch, deg_to_rad(-88.0), deg_to_rad(75.0))
@@ -159,12 +170,25 @@ func _read_input(delta: float) -> Dictionary:
 	inp.tuck = Input.get_action_strength("tuck")
 	inp.flap = Input.is_action_pressed("flap")
 	inp.brake = Input.is_action_pressed("brake")
-	inp.roll = Input.get_action_strength("roll_right") - Input.get_action_strength("roll_left")
+	# A/D: 누르고 있으면 좌우 선회, 빠르게 두 번 누르면 구르기
+	var turn := Input.get_action_strength("roll_right") - Input.get_action_strength("roll_left")
+	if absf(turn) > 0.1:
+		aim_yaw -= turn * KEY_TURN * delta
+		_aim_idle = 0.0
+	var now := Time.get_ticks_msec() / 1000.0
+	for side: String in ["l", "r"]:
+		if Input.is_action_just_pressed("roll_left" if side == "l" else "roll_right"):
+			if now - float(_tap_t[side]) < DOUBLE_TAP:
+				inp.roll = -1.0 if side == "l" else 1.0
+				_tap_t[side] = -1.0
+			else:
+				_tap_t[side] = now
 	# 패드 스틱 조준
 	var jx := Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
 	var jy := Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
 	var jv := Vector2(jx, jy)
 	if jv.length() > 0.18:
+		_aim_idle = 0.0
 		var rate := 2.2 * Settings.mouse_sens * delta
 		aim_yaw -= jx * rate
 		aim_pitch -= (jy if not Settings.invert_y else -jy) * rate
@@ -173,8 +197,10 @@ func _read_input(delta: float) -> Dictionary:
 
 
 func _fly(delta: float) -> void:
+	_aim_idle += delta
 	var inp := _read_input(delta)
 	var want_tuck: float = inp.tuck
+	_assist_steering(delta, inp)
 	if stalled:
 		want_tuck = 0.0
 	tuck = move_toward(tuck, want_tuck, delta * (3.4 if want_tuck > tuck else 4.8))
@@ -246,7 +272,9 @@ func _fly(delta: float) -> void:
 	if stalled:
 		var down := (Vector3(dir.x, 0, dir.z).normalized() + Vector3.DOWN * 1.2).normalized()
 		dir = dir.slerp(down, 1.0 - exp(-1.6 * delta)).normalized()
-		aim_pitch = lerpf(aim_pitch, deg_to_rad(-40.0), 1.0 - exp(-2.0 * delta))
+		# 조준은 살짝만 내린다 (카메라가 제멋대로 고개 숙이지 않게)
+		if aim_pitch > deg_to_rad(-12.0):
+			aim_pitch = lerpf(aim_pitch, deg_to_rad(-12.0), 1.0 - exp(-1.0 * delta))
 		speed += 3.0 * delta
 	# 상승기류 / 능선 바람
 	var was_in := in_thermal
@@ -256,15 +284,20 @@ func _fly(delta: float) -> void:
 	if flapping:
 		updraft += 1.6 * (1.0 - carry_w * 0.5)
 	var wind := _wind()
-	velocity = dir * speed + Vector3.UP * updraft + wind * (0.35 + 0.3 * (1.0 - tuck))
+	# 상승기류 안의 공기는 바람과 함께 움직이므로 기둥 밖으로 밀려나지 않는다
+	velocity = dir * speed + Vector3.UP * updraft + wind * (0.35 + 0.3 * (1.0 - tuck)) * (1.0 - 0.85 * thermal_k)
 	# 고도 제한
 	if global_position.y > WorldShape.MAX_ALT and velocity.y > 0.0:
 		velocity.y *= 0.2
 	var new_pos := global_position + velocity * delta
 	# 경계: 바깥으로 나가면 되돌린다
 	if not WorldShape.in_bounds(new_pos):
-		var inward := -Vector3(new_pos.x, 0, new_pos.z).normalized()
-		dir = dir.slerp((dir + inward * 2.0).normalized(), 1.0 - exp(-2.5 * delta)).normalized()
+		var inward := WorldShape.inward(new_pos)
+		# 정면으로 부딪혀도 한쪽으로 돌아 나가도록 옆 성분을 섞는다
+		var side := dir.cross(Vector3.UP).normalized()
+		if side.dot(inward) < 0.0:
+			side = -side
+		dir = dir.slerp((dir + inward * 2.0 + side).normalized(), 1.0 - exp(-2.5 * delta)).normalized()
 		aim_yaw = lerp_angle(aim_yaw, atan2(-dir.x, -dir.z), 1.0 - exp(-3.0 * delta))
 	global_position = new_pos
 	# 뱅크 & 구르기
@@ -320,6 +353,8 @@ func _compute_updraft() -> float:
 	var p := global_position
 	var up := 0.0
 	in_thermal = false
+	thermal_here = {}
+	thermal_k = 0.0
 	var main := get_tree().get_first_node_in_group("main")
 	var tf := 1.0
 	if main and main.day_night:
@@ -328,12 +363,15 @@ func _compute_updraft() -> float:
 		var tp: Vector3 = t.pos
 		var d := Vector2(p.x - tp.x, p.z - tp.z).length()
 		var r: float = t.r
-		if d < r * 1.3 and p.y < tp.y + 650.0:
-			var k := 1.0 - smoothstep(r * 0.6, r * 1.3, d)
+		if d < r * 1.35 and p.y < tp.y + 650.0:
+			var k := 1.0 - smoothstep(r * 0.75, r * 1.35, d)
 			var top := 1.0 - smoothstep(tp.y + 450.0, tp.y + 650.0, p.y)
 			up = maxf(up, float(t.power) * k * top * (0.35 + 0.65 * tf))
 			if k > 0.3:
 				in_thermal = true
+			if k * top > thermal_k:
+				thermal_k = k * top
+				thermal_here = t
 	# 능선 상승풍: 바람이 바다에서 절벽으로 불 때 절벽 앞 공기가 솟는다
 	var wind := _wind()
 	if wind.x < -1.0:
@@ -346,7 +384,45 @@ func _compute_updraft() -> float:
 			if p.y < cliff_top + 90.0:
 				var k2 := (1.0 - smoothstep(0.0, 140.0, dx)) * cf
 				up = maxf(up, absf(wind.x) * 0.9 * k2)
+	# 먼 섬의 절벽: 바람이 부딪히는 쪽 절벽 앞에서 공기가 솟는다
+	var wl := Vector2(wind.x, wind.z).length()
+	if wl > 1.0:
+		var isl := WorldShape.island_near(p, 150.0)
+		if isl and isl.id != "seals":
+			var wd := Vector3(wind.x, 0.0, wind.z) / wl
+			var ahead := WorldShape.ground(p.x + wd.x * 45.0, p.z + wd.z * 45.0)
+			var rise := ahead - WorldShape.floor_y(p.x, p.z)
+			if rise > 15.0 and p.y < ahead + 80.0:
+				var k3 := clampf(rise / 60.0, 0.0, 1.0) * (1.0 - smoothstep(ahead + 30.0, ahead + 80.0, p.y))
+				up = maxf(up, wl * 0.9 * k3)
 	return up
+
+
+## 손을 뗐을 때의 도움: 상승기류 안에서는 자동 선회, 그 밖에서는 천천히 수평으로
+func _assist_steering(delta: float, inp: Dictionary) -> void:
+	var hands_off: bool = _aim_idle > 1.0 and input_enabled and not inp.flap and inp.tuck < 0.2 and not stalled
+	# 먹잇감을 겨누고 있거나 크게 위아래로 겨눌 때는 끼어들지 않는다
+	var aiming: bool = (assist_target != null and is_instance_valid(assist_target)) or absf(aim_pitch) > deg_to_rad(35.0)
+	auto_circle = hands_off and not aiming and not thermal_here.is_empty() and thermal_k > 0.05
+	if not auto_circle:
+		_circle_sign = 0.0
+		if hands_off and not aiming and _aim_idle > 1.5 and absf(aim_pitch) < deg_to_rad(30.0):
+			aim_pitch = lerpf(aim_pitch, deg_to_rad(-4.0), 1.0 - exp(-0.5 * delta))
+		return
+	var c: Vector3 = thermal_here.pos
+	var rel := Vector3(global_position.x - c.x, 0.0, global_position.z - c.z)
+	if rel.length() < 1.0:
+		rel = Vector3(-dir.z, 0.0, dir.x)
+	var rn := rel.normalized()
+	var tangent := Vector3.UP.cross(rn)
+	if _circle_sign == 0.0:
+		_circle_sign = 1.0 if tangent.dot(Vector3(dir.x, 0.0, dir.z)) >= 0.0 else -1.0
+	tangent *= _circle_sign
+	var want_r := float(thermal_here.r) * 0.5
+	var radial := -rn * clampf((rel.length() - want_r) / want_r, -1.0, 1.0)
+	var hd := (tangent + radial * 0.9).normalized()
+	aim_yaw = lerp_angle(aim_yaw, atan2(-hd.x, -hd.z), 1.0 - exp(-2.5 * delta))
+	aim_pitch = lerpf(aim_pitch, deg_to_rad(-8.0), 1.0 - exp(-1.5 * delta))   # 속도를 잃지 않게 살짝 숙인다
 
 
 func _check_ground(_delta: float) -> void:

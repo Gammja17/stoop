@@ -101,6 +101,8 @@ func _ready() -> void:
 	add_child(_waves)
 	_wind_player = AudioStreamPlayer.new()
 	_wind_player.bus = "Ambience"
+	# 웹은 기본이 '샘플' 재생이라 실시간 생성 소리가 안 난다 → 스트림으로 재생
+	_wind_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	var gen := AudioStreamGenerator.new()
 	gen.mix_rate = MIX
 	gen.buffer_length = 0.12
@@ -323,6 +325,26 @@ func _build_synth() -> void:
 	_add("gull", _bird_call(2, 0.22, 0.3, 1400.0, 1000.0, 0.1))
 	# 오리 꽥
 	_add("quack", _bird_call(2, 0.14, 0.2, 420.0, 360.0, 0.35))
+	# 까마귀 까악
+	_add("caw", _bird_call(1, 0.3, 0.34, 720.0, 560.0, 0.6))
+	_add("caw", _bird_call(2, 0.2, 0.28, 760.0, 600.0, 0.55))
+	# 흰꼬리수리: 높고 가는 연속 울음
+	_add("eagle", _bird_call(5, 0.1, 0.16, 2350.0, 2050.0, 0.08))
+	# 물범: 낮은 울음
+	_add("seal", _bird_call(1, 0.8, 0.85, 240.0, 170.0, 0.35))
+	_add("seal", _bird_call(2, 0.35, 0.45, 300.0, 210.0, 0.3))
+	# 박쥐: 아주 높은 찍찍
+	_add("bat", _chirp(6, 0.025, 0.06, 5200.0, 6400.0))
+	# 고래 숨 뿜기: 길고 낮은 노이즈
+	var bn := int(MIX * 1.6)
+	var bs := PackedFloat32Array()
+	bs.resize(bn)
+	var blp := 0.0
+	for i in bn:
+		var t := float(i) / bn
+		blp += ((randf() * 2.0 - 1.0) - blp) * 0.08
+		bs[i] = blp * minf(t * 10.0, 1.0) * pow(1.0 - t, 1.5) * 3.0
+	_add("blow", bs)
 	# 목표 달성 차임
 	_add("chime", _chime([880.0, 1318.5]))
 	_add("chime_big", _chime([659.3, 880.0, 1318.5]))

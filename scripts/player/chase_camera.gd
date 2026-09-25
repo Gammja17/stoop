@@ -34,7 +34,6 @@ var cine_angle := 0.0
 var cine_facing := Vector3.ZERO   # 0이 아니면 이 방향 쪽에서만 호를 그리며 바라본다
 var cine_turn := 0.33
 var eye_zoom := 0.0
-var _roll := 0.0
 
 
 func _ready() -> void:
@@ -152,17 +151,16 @@ func _follow(delta: float, real_dt: float) -> void:
 	if target == null:
 		return
 	var sp := clampf(target.speed / 110.0, 0.0, 1.0)
-	var aim := target.aim_dir()
-	var vel_dir := target.dir
-	var look := aim.lerp(vel_dir, 0.3).normalized()
-	_look = _look.slerp(look, 1.0 - exp(-6.5 * real_dt)).normalized()
+	# 카메라는 조준(마우스) 방향만 본다. 매가 방향을 트는 동안 혼자 돌지 않는다
+	var look := target.aim_dir()
+	_look = _look.slerp(look, 1.0 - exp(-14.0 * real_dt)).normalized()
 	var up := Vector3.UP
 	if absf(_look.dot(up)) > 0.97:
 		up = (target.aim_dir() * -1.0 + Vector3.BACK * 0.01).normalized()
 	var right := _look.cross(up).normalized()
 	var cam_up := right.cross(_look).normalized()
 	# 가속할 때 카메라가 살짝 뒤처진다
-	var lag := clampf(target.accel_smooth * 0.035, -0.6, 1.3)
+	var lag := clampf(target.accel_smooth * 0.012, -0.3, 0.4)
 	var dist := lerpf(3.3, 2.6, sp) + lag + (0.6 if target.carrying else 0.0)
 	var height := lerpf(0.75, 0.45, sp)
 	var want := -_look * dist + cam_up * height
@@ -175,8 +173,6 @@ func _follow(delta: float, real_dt: float) -> void:
 	global_position = pos
 	var look_at_p := target.global_position + _look * 25.0
 	look_at(look_at_p, cam_up)
-	_roll = lerpf(_roll, -target.bank * 0.22, 1.0 - exp(-5.0 * real_dt))
-	rotate_object_local(Vector3.FORWARD, _roll)
 	var fx := Settings.fx_intensity
 	var want_fov := base_fov + 38.0 * pow(sp, 1.25) * fx + fov_punch
 	want_fov = lerpf(want_fov, 34.0, eye_zoom)
@@ -191,13 +187,13 @@ func _first_person(real_dt: float) -> void:
 	if target == null:
 		return
 	var sp := clampf(target.speed / 110.0, 0.0, 1.0)
-	var look := target.aim_dir().lerp(target.dir, 0.4).normalized()
-	_look = _look.slerp(look, 1.0 - exp(-9.0 * real_dt)).normalized()
+	var look := target.aim_dir()
+	_look = _look.slerp(look, 1.0 - exp(-14.0 * real_dt)).normalized()
 	var head := target.global_transform * (Vector3(0, 0.09, -0.24) * BirdModel.VISUAL / 1.5)
 	var fy := WorldShape.floor_y(head.x, head.z) + 0.3
 	head.y = maxf(head.y, fy)
 	global_position = head
-	var up := Vector3.UP.slerp(target.global_basis.y, 0.5).normalized()
+	var up := Vector3.UP
 	if absf(_look.dot(up)) > 0.97:
 		up = target.global_basis.y
 	look_at(head + _look * 10.0, up)

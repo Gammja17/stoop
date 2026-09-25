@@ -30,6 +30,7 @@ func build() -> void:
 	WorldShape.setup()
 	_make_materials()
 	_build_terrain()
+	_build_islands()
 	await get_tree().process_frame
 	_build_water()
 	_build_stacks()
@@ -84,6 +85,12 @@ func _build_terrain() -> void:
 			var i0 := ci * CHUNK
 			var j0 := cj * CHUNK
 			var w := CHUNK + 1
+			var top := -INF
+			for j in range(j0, j0 + w):
+				for i in range(i0, i0 + w):
+					top = maxf(top, grid[j * G + i])
+			if top < -20.0:
+				continue
 			for j in range(j0, j0 + w):
 				var z := -H + j * C
 				var bf := WorldShape.bay_factor(z)
@@ -127,6 +134,89 @@ func _build_terrain() -> void:
 			mi.mesh = mesh
 			mi.name = "Terrain_%d_%d" % [ci, cj]
 			add_child(mi)
+
+
+# ---------- 먼 섬 ----------
+
+func _build_islands() -> void:
+	for isl: WorldShape.Island in WorldShape.islands:
+		var verts := PackedVector3Array()
+		var norms := PackedVector3Array()
+		var tans := PackedFloat32Array()
+		var uvs := PackedVector2Array()
+		var cols := PackedColorArray()
+		var idx := PackedInt32Array()
+		var C := isl.cell
+		var all_sand := isl.id == "seals"
+		for j in isl.nz:
+			var z := isl.z0 + j * C
+			for i in isl.nx:
+				var x := isl.x0 + i * C
+				var h := isl.h[j * isl.nx + i]
+				verts.append(Vector3(x, h, z))
+				var n := Vector3(isl.hgt(i - 1, j) - isl.hgt(i + 1, j), 2.0 * C, isl.hgt(i, j - 1) - isl.hgt(i, j + 1)).normalized()
+				norms.append(n)
+				var t := (Vector3.RIGHT - n * n.x).normalized()
+				tans.append_array([t.x, t.y, t.z, -1.0])
+				uvs.append(Vector2(x, z) * 0.1)
+				var sand := 1.0 - smoothstep(1.2, 5.5, h)
+				if all_sand:
+					sand = 1.0 - smoothstep(4.5, 7.0, h)
+				cols.append(Color(0.0, sand, 0.0))
+		for j in isl.nz - 1:
+			for i in isl.nx - 1:
+				var a := j * isl.nx + i
+				var b := a + 1
+				var c := a + isl.nx
+				var d := c + 1
+				if maxf(maxf(isl.h[a], isl.h[b]), maxf(isl.h[c], isl.h[d])) < -20.0:
+					continue
+				idx.append_array([a, b, d, a, d, c])
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = verts
+		arr[Mesh.ARRAY_NORMAL] = norms
+		arr[Mesh.ARRAY_TANGENT] = tans
+		arr[Mesh.ARRAY_TEX_UV] = uvs
+		arr[Mesh.ARRAY_COLOR] = cols
+		arr[Mesh.ARRAY_INDEX] = idx
+		var mesh := ArrayMesh.new()
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		mesh.surface_set_material(0, terrain_mat)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.name = "Island_" + isl.id
+		add_child(mi)
+		if isl.info.has("cave"):
+			_build_cave(isl)
+
+
+## 박쥐섬 서쪽 절벽의 해식동굴 입구 (어두운 아치)
+func _build_cave(isl: WorldShape.Island) -> void:
+	var cave: Vector3 = isl.info.cave
+	var out := (cave - isl.center)
+	out.y = 0.0
+	out = out.normalized()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.02, 0.02, 0.025)
+	mat.roughness = 1.0
+	var sm := SphereMesh.new()
+	sm.radius = 1.0
+	sm.height = 2.0
+	sm.radial_segments = 16
+	sm.rings = 8
+	sm.material = mat
+	var mi := MeshInstance3D.new()
+	mi.mesh = sm
+	mi.name = "BatCave"
+	add_child(mi)
+	# 절벽 면에 반쯤 묻힌 납작한 타원: 멀리서 보면 검은 동굴 입구
+	var face := cave
+	for k in 30:
+		face = cave - out * (k * 0.5)
+		if WorldShape.ground(face.x, face.z) > 8.0:
+			break
+	mi.global_transform = Transform3D(Basis.looking_at(out, Vector3.UP).scaled(Vector3(11.0, 13.0, 4.0)), face + Vector3(0, 1.0, 0) + out * 1.5)
 
 
 # ---------- 바다 ----------
@@ -340,7 +430,7 @@ func _mm(parts: Array, xforms: Array, cast: bool = true) -> MultiMeshInstance3D:
 	var mmi := MultiMeshInstance3D.new()
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mmi.visibility_range_end = 2200.0
+	mmi.visibility_range_end = 3500.0   # 멀티메시 AABB 중심 기준이라 섬까지 넉넉히
 	add_child(mmi)
 	return mmi
 
@@ -404,6 +494,7 @@ func _build_vegetation() -> void:
 			elif _rng.randf() < 0.012:
 				rock_x[rocks[_rng.randi() % rocks.size()]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.5, 5.0)))
 		z += step
+	_island_vegetation(pines, bushes, rocks, pine_x, bush_x, rock_x)
 	for p in pines:
 		if pine_x[p].size() > 0:
 			_mm(glb_parts(NATURE + p), pine_x[p])
@@ -421,6 +512,48 @@ func _build_vegetation() -> void:
 		if rock_x[r].size() > 0:
 			var mmi := _mm(glb_parts(NATURE + r), rock_x[r])
 			mmi.material_override = rock_mat
+
+
+func _island_vegetation(pines: Array, bushes: Array, rocks: Array, pine_x: Dictionary, bush_x: Dictionary, rock_x: Dictionary) -> void:
+	var log_x := []
+	for isl: WorldShape.Island in WorldShape.islands:
+		var step := 9.0
+		var z := isl.z0
+		while z < isl.z0 + (isl.nz - 1) * isl.cell:
+			var x := isl.x0
+			while x < isl.x0 + (isl.nx - 1) * isl.cell:
+				var px := x + _rng.randf_range(-3, 3)
+				var pz := z + _rng.randf_range(-3, 3)
+				x += step
+				var h := WorldShape.ground(px, pz)
+				if h < 1.5:
+					continue
+				var n := WorldShape.normal(px, pz)
+				var xf := Transform3D(Basis(Vector3.UP, _rng.randf() * TAU), Vector3(px, h - 0.3, pz))
+				if n.y < 0.78:
+					if n.y > 0.45 and _rng.randf() < 0.08:
+						rock_x[rocks[_rng.randi() % rocks.size()]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.5, 5.5)))
+					continue
+				match isl.id:
+					"seabird":
+						if _rng.randf() < 0.22:
+							bush_x[bushes[3]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(3.0, 5.0)))
+						elif _rng.randf() < 0.04:
+							rock_x[rocks[_rng.randi() % rocks.size()]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.0, 4.0)))
+					"bats":
+						if _rng.randf() < 0.16:
+							var pf: String = pines[_rng.randi() % pines.size()]
+							pine_x[pf].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(5.0, 8.0)))
+						elif _rng.randf() < 0.3:
+							bush_x[bushes[_rng.randi() % bushes.size()]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.5, 4.5)))
+					"seals":
+						if h > 3.0 and _rng.randf() < 0.05:
+							bush_x[bushes[3]].append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.0, 3.5)))
+						elif _rng.randf() < 0.012:
+							log_x.append(xf.scaled_local(Vector3.ONE * _rng.randf_range(2.5, 4.0)))
+			z += step
+	if log_x.size() > 0:
+		_mm(glb_parts(NATURE + "log.glb"), log_x)
 
 
 func set_season(season: int) -> void:
@@ -489,8 +622,8 @@ func _build_clouds() -> void:
 	sm.radial_segments = 10
 	sm.rings = 6
 	sm.material = mat
-	for i in 26:
-		var c := Vector3(_rng.randf_range(-1300, 1300), _rng.randf_range(300, 520), _rng.randf_range(-1300, 1300))
+	for i in 40:
+		var c := Vector3(_rng.randf_range(-1300, 2900), _rng.randf_range(300, 520), _rng.randf_range(-1300, 1300))
 		var root := Node3D.new()
 		root.position = c
 		add_child(root)

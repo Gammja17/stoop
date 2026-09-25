@@ -9,6 +9,10 @@ const TYPES := {
 	"starling": {"model": "starling", "cruise": 15.0, "max": 19.5, "agility": 0.7, "strike": 13.0, "food": 12.0, "weight": 0.1, "detect": 55.0, "juke": 8.0, "alt": [10.0, 55.0], "small": true},
 	"sandpiper": {"model": "sandpiper", "cruise": 16.0, "max": 21.0, "agility": 0.72, "strike": 13.0, "food": 15.0, "weight": 0.12, "detect": 60.0, "juke": 9.0, "alt": [3.0, 35.0], "small": true},
 	"duck": {"model": "duck", "cruise": 19.0, "max": 25.0, "agility": 0.3, "strike": 40.0, "food": 58.0, "weight": 0.7, "detect": 95.0, "juke": 6.0, "alt": [5.0, 45.0], "small": false, "water_escape": true},
+	# 바다쇠오리: 수면 바로 위를 낮고 빠르게 난다. 매가 가까이 오면 물속으로 잠수한다
+	"murrelet": {"model": "murrelet", "cruise": 19.0, "max": 25.0, "agility": 0.35, "strike": 18.0, "food": 24.0, "weight": 0.22, "detect": 75.0, "juke": 6.0, "alt": [2.5, 9.0], "small": false, "water_escape": true, "dive": true, "no_glide": true},
+	# 박쥐: 해 질 녘 동굴에서 쏟아져 나온다. 지그재그로 날아 맞히기 어렵다
+	"bat": {"model": "bat", "cruise": 10.0, "max": 15.0, "agility": 0.9, "strike": 6.0, "food": 7.0, "weight": 0.03, "detect": 30.0, "juke": 9.0, "alt": [6.0, 55.0], "small": true, "erratic": true, "no_glide": true},
 }
 
 var kind := "pigeon"
@@ -36,6 +40,13 @@ var prev := Vector3.ZERO
 var _check_t := 0.0
 var _swim_t := 0.0
 var catch_lock := 0.0     # 맞은 직후 잠깐은 다시 잡을 수 없다(STRIKE 연출이 묻히지 않게)
+var _err_t := 0.0
+var _under := false       # 잠수 중
+var _lod_n := randi() % 4
+var _lod_acc := 0.0
+
+const LOD_DIST := 700.0
+static var focus := Vector3.ZERO   # 매 위치 (PreyManager가 매 프레임 갱신)
 
 
 func setup(p_kind: String, pos: Vector3, p_home: Vector3, p_home_r: float) -> Prey:
@@ -76,6 +87,14 @@ func is_loose() -> bool:
 
 
 func _process(delta: float) -> void:
+	# 멀리서 그냥 날아다니는 새는 가끔만 계산한다 (보이지도 않고 맞을 일도 없다)
+	if state == S.FLY and global_position.distance_squared_to(focus) > LOD_DIST * LOD_DIST:
+		_lod_acc += delta
+		_lod_n += 1
+		if _lod_n % 4 != 0:
+			return
+		delta = _lod_acc
+	_lod_acc = 0.0
 	prev = global_position
 	juke_cd -= delta
 	catch_lock -= delta
@@ -121,6 +140,12 @@ func _fly(delta: float) -> void:
 			_awareness()
 	else:
 		desired = _flee_dir(delta)
+	# 박쥐: 먹이를 쫓듯 불규칙하게 방향을 튼다
+	if t.get("erratic", false):
+		_err_t -= delta
+		if _err_t <= 0.0:
+			_err_t = randf_range(0.25, 0.6)
+			vel += Vector3(randf_range(-1, 1), randf_range(-0.5, 0.5), randf_range(-1, 1)) * 6.0
 	# 고도 유지
 	var gy := WorldShape.floor_y(p.x, p.z)
 	var alt: Array = t.alt
@@ -129,11 +154,11 @@ func _fly(delta: float) -> void:
 		desired.y += (alt[0] - above) * 0.9
 	elif above > alt[1] * 1.3 and state == S.FLY:
 		desired.y -= (above - alt[1]) * 0.3
-	if above < 2.0 and not (kind == "duck" and state == S.FLEE):
+	if above < 2.0 and not (t.get("water_escape", false) and state == S.FLEE):
 		desired.y = maxf(desired.y, 6.0)
 	# 경계 밖으로 나가지 않게
-	if not WorldShape.in_bounds(p * 1.05):
-		desired += -Vector3(p.x, 0, p.z).normalized() * 12.0
+	if not WorldShape.in_bounds(p, 70.0):
+		desired += WorldShape.inward(p, 70.0) * 12.0
 	var steer := 2.2 if state == S.FLEE else 1.3
 	vel = vel.lerp(desired, 1.0 - exp(-steer * delta))
 	var maxs: float = t.max if state == S.FLEE else float(t.cruise) * 1.2
@@ -192,8 +217,8 @@ func _flee_dir(delta: float) -> Vector3:
 	var desired := (away * 0.8 + vel.normalized() * 0.6).normalized() * float(t.max)
 	if flock:
 		desired = desired * 0.6 + boid * 0.4
-	# 오리는 물로 뛰어든다
-	if t.get("water_escape", false) and WorldShape.is_water(p.x, p.z):
+	# 오리는 물로 뛰어든다. 바다쇠오리는 매가 가까이 와야 잠수한다
+	if t.get("water_escape", false) and WorldShape.is_water(p.x, p.z) and (not t.get("dive", false) or d < 35.0):
 		desired.y = -12.0
 		if p.y < 1.2:
 			_start_swim()
@@ -237,6 +262,10 @@ func _start_swim() -> void:
 	position.y = 0.05
 	vel = Vector3(vel.x, 0, vel.z) * 0.2
 	_swim_t = 0.0
+	if t.get("dive", false):
+		_under = true
+		position.y = -2.0
+		vel = Vector3(vel.x, 0, vel.z).normalized() * 4.0
 	get_tree().call_group("main", "fx_splash", global_position, 0.7)
 	Sfx.play_at("splash", global_position, -6.0, 1.4, 250.0)
 
@@ -244,6 +273,14 @@ func _start_swim() -> void:
 func _swim(delta: float) -> void:
 	_swim_t += delta
 	position += vel * delta
+	if _under:
+		# 물속에서 몇 초 헤엄치다 다른 곳으로 떠오른다
+		position.y = -2.0
+		if _swim_t > 5.0:
+			_under = false
+			position.y = 0.05
+			Sfx.play_at("splash", global_position, -12.0, 1.8, 150.0)
+		return
 	vel = vel.lerp(Vector3.ZERO, delta * 0.5)
 	position.y = sin(_swim_t * 1.7) * 0.04
 	var f := _falcon()
@@ -335,7 +372,7 @@ func _animate(delta: float) -> void:
 			glide_t -= delta
 			if glide_t < -2.5:
 				glide_t = randf_range(0.6, 2.0)
-			var gliding := glide_t > 0.0 and not fast and kind != "duck"
+			var gliding: bool = glide_t > 0.0 and not fast and kind != "duck" and not t.get("no_glide", false)
 			flap_t += delta * (0.0 if gliding else (16.0 if fast else 11.0) * (1.4 if weight < 0.2 else 1.0))
 			model.flap_phase = flap_t
 			model.flap_amp = lerpf(model.flap_amp, 0.05 if gliding else 0.75, 1.0 - exp(-8.0 * delta))

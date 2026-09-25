@@ -56,6 +56,8 @@ func _ready() -> void:
 	falcon.display_dive.connect(func(pk, rolls): life.on_display_dive(pk, rolls))
 	prey_mgr.contact.connect(_on_contact)
 	prey_mgr.gull_hit.connect(_on_gull_hit)
+	prey_mgr.mobber_hit.connect(_on_mobber_hit)
+	prey_mgr.eagle_hit.connect(_on_eagle_hit)
 	day_night.new_day.connect(func(): life.on_new_day())
 	day_night.hour_passed.connect(func(h): life.on_hour(h))
 	day_night.dusk.connect(func(): life.on_dusk())
@@ -224,7 +226,8 @@ func _process(delta: float) -> void:
 	if not prologue.active:
 		life.update(delta)
 	hud.update_hud(self, delta)
-	hud.reticle.markers = prologue.markers() if prologue.active else life.markers()
+	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers()
+	_check_islands(delta)
 	camera.eye_zoom = _eye
 	var kmh := falcon.kmh()
 	if kmh >= 300.0:
@@ -532,6 +535,10 @@ func _check_hunt_records(p: Prey, perfect: bool) -> void:
 			Records.unlock("perfect_10")
 	if p.kind == "duck":
 		Records.unlock("duck")
+	if p.kind == "murrelet":
+		Records.unlock("murrelet")
+	if p.kind == "bat":
+		Records.unlock("bat")
 	var kinds: Dictionary = GameState.stats().get("prey", {})
 	if kinds.has("pigeon") and kinds.has("starling") and kinds.has("sandpiper") and kinds.has("duck"):
 		Records.unlock("all_prey")
@@ -544,6 +551,113 @@ func _on_gull_hit(g: Gull) -> void:
 	Fx.feathers(fx_root, g.global_position, falcon.velocity, Color(1, 1, 1), Color(0.7, 0.72, 0.75), 30, 0.8)
 	Sfx.play("hit_med", -2.0, 1.1)
 	hud.popup(Loc.t("gull_driven"), "", Color(0.9, 0.95, 1.0), 0.8)
+
+
+# ---------- 섬과 새 동물 ----------
+
+var _island_t := 0.0
+var _mob_note_t := 0.0
+
+
+## 처음 가 본 섬 알림과 기록
+func _check_islands(delta: float) -> void:
+	_island_t -= delta
+	_mob_note_t -= delta
+	if _island_t > 0.0 or prologue.active:
+		return
+	_island_t = 1.0
+	var st := GameState.stats()
+	var seen: Array = st.get("islands", [])
+	var isl := WorldShape.island_near(falcon.global_position, 20.0)
+	if isl and not seen.has(isl.id):
+		seen.append(isl.id)
+		st["islands"] = seen
+		hud.popup(Loc.t("island_new"), Loc.t("map_isl_" + isl.id), Color(0.7, 0.9, 1.0), 1.2)
+		GameState.say(Loc.t("island_hint_" + isl.id), "gold")
+		Sfx.play("chime", -4.0)
+		if seen.size() >= WorldShape.islands.size():
+			Records.unlock("islands")
+
+
+func mobbed_start(m: Mobber) -> void:
+	if _mob_note_t > 0.0:
+		return
+	_mob_note_t = 25.0
+	GameState.say(Loc.t("mob_crow" if m.species == "crow" else "mob_gull"), "warn")
+
+
+func mobbed_peck(m: Mobber) -> void:
+	if not playing or falcon.state == Falcon.State.FROZEN:
+		return
+	falcon.stamina = maxf(falcon.stamina - 8.0, 0.0)
+	camera.add_trauma(0.18)
+	if not camera.first_person:
+		var sp := BirdModel.resolve(falcon.model.spec_id)
+		Fx.feathers(fx_root, falcon.global_position, m.vel, sp.back, sp.belly, 6, 0.3)
+	Sfx.play("hit_med", -10.0, 1.3)
+
+
+func _on_mobber_hit(m: Mobber) -> void:
+	m.knocked(falcon.velocity)
+	camera.add_trauma(0.3)
+	var sp := BirdModel.resolve("crow" if m.species == "crow" else "gull")
+	Fx.feathers(fx_root, m.global_position, falcon.velocity, sp.back, sp.belly, 24, 0.7)
+	Sfx.play("hit_med", -2.0, 1.1)
+	hud.popup(Loc.t("mob_driven"), "", Color(0.9, 0.95, 1.0), 0.7)
+
+
+func eagle_warn(e: SeaEagle) -> void:
+	GameState.say(Loc.t("eagle_warn"), "warn")
+	Sfx.play_at("eagle", e.global_position, 4.0, 1.0, 900.0)
+
+
+func eagle_steal(e: SeaEagle) -> void:
+	if falcon.carrying == null:
+		return
+	eating = 0.0
+	var p: Prey = falcon.drop_prey(false) as Prey
+	if p:
+		e.take_prey(p)
+		e._go_home()
+	camera.add_trauma(0.55)
+	hud.popup(Loc.t("stolen"), Loc.t("eagle_stolen_sub"), Color(1, 0.5, 0.4), 1.0)
+	Sfx.play("hit", -4.0, 0.8)
+
+
+func _on_eagle_hit(e: SeaEagle) -> void:
+	e.take_hit(falcon.velocity)
+	Records.unlock("eagle")
+	var sp := BirdModel.resolve("eagle")
+	Fx.feathers(fx_root, e.global_position, falcon.velocity, sp.back, sp.belly, 45, 1.0)
+	Fx.ring(fx_root, e.global_position, falcon.dir, 6.0, Color(1, 0.9, 0.8, 0.7))
+	Sfx.play("hit", 0.0, 0.85)
+	Sfx.play("boom", -4.0, 0.85)
+	camera.add_trauma(0.6)
+	camera.punch(-12.0)
+	_flash = 0.3
+	falcon.speed *= 0.6
+	hud.popup(Loc.t("eagle_driven"), "", Color(1, 0.8, 0.3), 1.0)
+
+
+func fox_warn(_f: Fox) -> void:
+	GameState.say(Loc.t("fox_warn"), "warn")
+	Sfx.play("step", -2.0, 0.7)
+
+
+func fox_pounce(fx: Fox) -> void:
+	if falcon.state != Falcon.State.PERCHED or not falcon.input_enabled:
+		return
+	eating = 0.0
+	if falcon.carrying:
+		var p: Prey = falcon.drop_prey(false) as Prey
+		if p:
+			fx.take(p)
+		hud.popup(Loc.t("fox_pounce"), Loc.t("fox_pounce_sub"), Color(1, 0.5, 0.4), 1.0)
+	else:
+		hud.popup(Loc.t("fox_pounce"), "", Color(1, 0.6, 0.45), 0.8)
+	falcon.take_off()
+	camera.add_trauma(0.5)
+	Sfx.play("hit_med", -2.0, 0.8)
 
 
 ## 타격감의 핵심: 멈춤(히트스톱) → 슬로모션 → 복귀
@@ -696,6 +810,10 @@ func _update_prompts() -> void:
 				txt = Loc.t("prompt_land")
 			elif not pr.is_empty():
 				txt = Loc.t("prompt_slow")
+			if falcon.auto_circle:
+				txt = Loc.t("prompt_autocircle") % falcon.updraft
+			elif falcon.in_thermal:
+				txt = Loc.t("prompt_thermal")
 			if falcon.carrying:
 				var cp := falcon.carrying as Prey
 				var small: bool = cp != null and cp.t.get("small", false)
@@ -796,6 +914,6 @@ func _update_audio() -> void:
 	var p := camera.global_position
 	var sea_k := 0.0
 	var gy := WorldShape.ground(p.x, p.z)
-	var coast_d := absf(p.x - WorldShape.coast_x(p.z))
+	var coast_d := WorldShape.shore_dist(p)
 	sea_k = (1.0 - smoothstep(20.0, 300.0, coast_d)) * (1.0 - smoothstep(20.0, 250.0, p.y - maxf(gy, 0.0)))
 	Sfx.set_waves(sea_k * 0.8)

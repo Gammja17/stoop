@@ -135,6 +135,7 @@ func _process(delta: float) -> void:
 	if aim.length() > 0.01:
 		var d := aim.normalized()
 		f.aim_yaw = atan2(-d.x, -d.z)
+		f._aim_idle = 0.0
 		f.aim_pitch = clampf(asin(clampf(d.y, -1.0, 1.0)), deg_to_rad(-85.0), deg_to_rad(60.0))
 	# 너무 낮으면 빠져나온다
 	if agl() < 35.0 and f.velocity.y < -8.0:

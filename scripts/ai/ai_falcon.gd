@@ -9,6 +9,7 @@ var perch_pos := Vector3.ZERO
 var perch_facing := Vector3.RIGHT
 var tuck := 0.0
 var carrying: Prey = null
+var flap_rate := 11.0      # 큰 새는 느리게 퍼덕인다
 var prev := Vector3.ZERO
 var _flap_t := 0.0
 var _glide := 0.0
@@ -107,7 +108,7 @@ func animate(delta: float) -> void:
 		if _glide < -2.0:
 			_glide = randf_range(1.0, 3.0)
 		var flap := climbing or _glide < 0.0
-		_flap_t += delta * (11.0 if flap else 1.5)
+		_flap_t += delta * (flap_rate if flap else 1.5)
 		m.flap_phase = _flap_t
 		m.flap_amp = lerpf(m.flap_amp, (0.7 if flap else 0.05) * (1.0 - tuck), 1.0 - exp(-6.0 * delta))
 		m.talons_out = 1.0 if carrying or is_landing() else 0.0

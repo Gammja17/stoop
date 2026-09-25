@@ -21,12 +21,14 @@ func open() -> void:
 
 static func _build_image() -> Image:
 	var half := WorldShape.HALF
-	var res := 280
-	var img := Image.create(res, res, false, Image.FORMAT_RGB8)
-	for j in res:
-		for i in res:
-			var x := -half + (i + 0.5) * (half * 2.0 / res)
-			var z := -half + (j + 0.5) * (half * 2.0 / res)
+	var w := 440
+	var hh := 280
+	var span := WorldShape.X_MAX - WorldShape.X_MIN
+	var img := Image.create(w, hh, false, Image.FORMAT_RGB8)
+	for j in hh:
+		for i in w:
+			var x := WorldShape.X_MIN + (i + 0.5) * (span / w)
+			var z := -half + (j + 0.5) * (half * 2.0 / hh)
 			var h := WorldShape.ground(x, z)
 			var c: Color
 			if h < 0.0:

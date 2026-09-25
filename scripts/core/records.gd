@@ -23,6 +23,10 @@ const LIST := [
 	["fledged_10", "대가족", "Big Family", "새끼 10마리를 독립시킨다 (모든 세대 합계)", "Raise 10 young across generations"],
 	["gen3", "3대", "Three Generations", "3대째 혈통을 잇는다", "Reach the third generation"],
 	["old_age", "천수", "Full Life", "늙어서 생을 마친다", "Die of old age"],
+	["islands", "섬 탐험가", "Island Hopper", "먼 바다의 섬 세 곳에 모두 가 본다", "Visit all three far islands"],
+	["murrelet", "잠수하기 전에", "Before the Dive", "바다쇠오리를 잡는다", "Catch an ancient murrelet"],
+	["bat", "황혼의 사냥꾼", "Dusk Hunter", "박쥐를 잡는다", "Catch a bat"],
+	["eagle", "거인에 맞서", "Giant Slayer", "흰꼬리수리를 들이받아 쫓아낸다", "Ram a white-tailed eagle away"],
 ]
 
 var _done := {}

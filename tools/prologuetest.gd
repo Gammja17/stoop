@@ -84,10 +84,17 @@ func _run() -> void:
 		print("[pro]   dir.y=%.2f spd=%.0f aim=%.0f tuck=%.2f state=%d stalled=%s agl=%.0f peak=%.0f" % [f.dir.y, f.kmh(), rad_to_deg(f.aim_pitch), f.tuck, f.state, f.stalled, f.global_position.y - WorldShape.floor_y(f.global_position.x, f.global_position.z), pro._peak])
 	await shot("P08_catch")
 	await wait(4.0)
-	if pro._gift and is_instance_valid(pro._gift):
-		var gp: Vector3 = pro._gift.global_position
-		f.spawn_flying(gp + Vector3(0, -1.0, -6.0), Vector3(0, 0, 1), 18.0)
-	await wait(1.0)
+	# 떨어지는 먹이 쪽으로 몇 번 들이댄다 (떨어지는 위치가 매번 달라서)
+	for tries in 8:
+		if pro.stage != Prologue.St.CATCH:
+			break
+		if pro._gift and is_instance_valid(pro._gift) and pro._gift.is_loose():
+			# 떨어지는 먹이를 같은 방향으로 따라가며 뒤에서 붙잡는다
+			var gp: Vector3 = pro._gift.global_position
+			var gv: Vector3 = pro._gift.vel
+			var d := gv.normalized() if gv.length() > 2.0 else Vector3(0, 0, 1)
+			f.spawn_flying(gp - d * 4.0, d, gv.length() + 7.0)
+		await wait(1.0)
 	await wait(2.5)
 	await shot("P09_eat")
 	f.land_at({"pos": WorldShape.eyrie, "kind": "eyrie", "facing": WorldShape.eyrie_facing}, true)

@@ -62,7 +62,19 @@ func confusion() -> float:
 	return clampf(float(n - 6) / 14.0, 0.0, 1.0)
 
 
+var _lod_n := randi() % 4
+var _lod_acc := 0.0
+
+
 func _process(delta: float) -> void:
+	# 먼 떼는 가끔만 계산한다
+	if alarmed_t <= 0.0 and centroid.distance_squared_to(Prey.focus) > Prey.LOD_DIST * Prey.LOD_DIST:
+		_lod_acc += delta
+		_lod_n += 1
+		if _lod_n % 4 != 0:
+			return
+		delta = _lod_acc
+	_lod_acc = 0.0
 	var alive := []
 	for m in members:
 		if is_instance_valid(m) and (m.state == Prey.S.FLY or m.state == Prey.S.FLEE):

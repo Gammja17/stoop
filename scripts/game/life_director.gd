@@ -136,6 +136,10 @@ func _one_time_hints() -> void:
 	if main.day_night.is_night() and not GameState.flag("hint_night"):
 		GameState.set_flag("hint_night")
 		GameState.say(Loc.t("hint_night"), "info")
+	var f: Falcon = main.falcon
+	if f.is_flying() and f.global_position.y > 180.0 and not GameState.flag("hint_islands"):
+		GameState.set_flag("hint_islands")
+		GameState.say(Loc.t("hint_islands"), "info")
 
 
 # ---------- 새끼 ----------
@@ -270,10 +274,15 @@ func on_hour(h: int) -> void:
 			_spawn_rival()
 	if h == 21 and _owl_tonight and owl == null:
 		_spawn_owl()
+	if h == 6:
+		main.prey_mgr.clear_bats()
 
 
 func on_dusk() -> void:
 	var s := season()
+	if s == 1 or s == 2:
+		main.prey_mgr.emerge_bats()
+		GameState.say(Loc.t("bats_emerge"), "gold")
 	if (s == 0 or s == 2) and randf() < 0.6:
 		var c := WorldShape.fields + Vector3(250, 0, 150)
 		main.prey_mgr.spawn_group("starling", c, c, 300.0, 45, "murmuration")

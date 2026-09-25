@@ -3,7 +3,9 @@ extends RefCounted
 ## 섬 해안 지형의 모양을 정의한다. 동쪽(+X)이 바다, 서쪽(-X)이 육지.
 ## 렌더링 메시와 충돌 판정이 같은 높이 격자를 쓰도록 격자를 한 번 만들어 둔다.
 
-const HALF := 1400.0          # 플레이 영역 반경
+const HALF := 1400.0          # 본섬 영역 반경
+const X_MIN := -1400.0        # 비행 영역: 서쪽 끝
+const X_MAX := 3000.0         # 비행 영역: 동쪽 바다의 섬들까지
 const RENDER_HALF := 2000.0   # 지형 메시 반경
 const CELL := 10.0
 const GRID := int(RENDER_HALF * 2.0 / CELL) + 1
@@ -27,6 +29,57 @@ static var lighthouse := Vector3.ZERO
 static var bay := Vector3.ZERO
 static var fields := Vector3.ZERO
 static var cliffs_center := Vector3.ZERO
+static var islands: Array = []       # Island (먼 바다의 섬)
+
+## 먼 섬: 자기만의 작은 높이 격자를 가진다 (본섬 격자는 그대로)
+const ISLAND_SPECS := [
+	{"id": "seabird", "pos": Vector2(1850, -850), "rot": 0.3, "ra": 240.0, "rb": 120.0, "cell": 6.0},
+	{"id": "seals", "pos": Vector2(2500, 300), "rot": -0.15, "ra": 380.0, "rb": 85.0, "cell": 8.0},
+	{"id": "bats", "pos": Vector2(1600, 1050), "rot": 0.0, "ra": 80.0, "rb": 70.0, "cell": 4.0},
+]
+
+
+class Island:
+	var id: String
+	var center := Vector3.ZERO
+	var rot := 0.0
+	var ra := 0.0     # 남북 반지름
+	var rb := 0.0     # 동서 반지름
+	var x0 := 0.0
+	var z0 := 0.0
+	var cell := 8.0
+	var nx := 0
+	var nz := 0
+	var h := PackedFloat32Array()
+	var info := {}    # 특징 지점: top, colony, cave, knoll, haulouts
+
+	func contains(x: float, z: float) -> bool:
+		return x >= x0 and z >= z0 and x < x0 + (nx - 1) * cell and z < z0 + (nz - 1) * cell
+
+	func hgt(i: int, j: int) -> float:
+		return h[clampi(j, 0, nz - 1) * nx + clampi(i, 0, nx - 1)]
+
+	## 본섬과 같은 삼각형 분할로 보간 (메시와 동일)
+	func sample(x: float, z: float) -> float:
+		var fx := (x - x0) / cell
+		var fz := (z - z0) / cell
+		var i := int(floor(fx))
+		var j := int(floor(fz))
+		fx -= i
+		fz -= j
+		var a := h[j * nx + i]
+		var b := h[j * nx + i + 1]
+		var c := h[(j + 1) * nx + i]
+		var d := h[(j + 1) * nx + i + 1]
+		if fx >= fz:
+			return a + (b - a) * fx + (d - b) * fz
+		return a + (d - c) * fx + (c - a) * fz
+
+	## 섬 좌표 (u: 동서, v: 남북) → 월드
+	func to_world(u: float, v: float) -> Vector3:
+		var x := center.x + u * cos(rot) + v * sin(rot)
+		var z := center.z - u * sin(rot) + v * cos(rot)
+		return Vector3(x, 0.0, z)
 
 
 static func setup(seed_value: int = 20260925) -> void:
@@ -49,6 +102,7 @@ static func setup(seed_value: int = 20260925) -> void:
 	_n_fine.frequency = 0.045
 	_n_fine.fractal_octaves = 2
 	_build_grid()
+	_build_islands()
 	_compute_features()
 	is_ready = true
 
@@ -74,6 +128,8 @@ static func coast_x(z: float) -> float:
 static func raw_height(x: float, z: float) -> float:
 	var c := coast_x(z)
 	var d := c - x
+	if d < -700.0:
+		return -45.0   # 먼 바다 바닥 (아래 식도 여기선 -45로 잘린다)
 	var cf := cliff_factor(z)
 	var big := _n_big.get_noise_2d(x, z)
 	var plateau := lerpf(14.0, 118.0, cf) + 22.0 * big + 7.0 * _n_mid.get_noise_2d(x, z)
@@ -113,8 +169,17 @@ static func gh(i: int, j: int) -> float:
 	return grid[j * GRID + i]
 
 
-## 메시 삼각형과 정확히 같은 지면 높이
+## 메시 삼각형과 정확히 같은 지면 높이 (먼 바다에선 섬 격자도 본다)
 static func ground(x: float, z: float) -> float:
+	var h := _grid_ground(x, z)
+	if h < -12.0:
+		for isl: Island in islands:
+			if isl.contains(x, z):
+				return maxf(h, isl.sample(x, z))
+	return h
+
+
+static func _grid_ground(x: float, z: float) -> float:
 	if grid.is_empty():
 		return 0.0
 	var fx := (x + RENDER_HALF) / CELL
@@ -168,8 +233,166 @@ static func hits_obstacle(p: Vector3, pad: float = 0.5) -> bool:
 	return false
 
 
-static func in_bounds(p: Vector3) -> bool:
-	return absf(p.x) < HALF and absf(p.z) < HALF
+static func in_bounds(p: Vector3, margin: float = 0.0) -> bool:
+	return p.x > X_MIN + margin and p.x < X_MAX - margin and absf(p.z) < HALF - margin
+
+
+## 경계 밖(또는 margin 안쪽)에서 안으로 향하는 수평 방향
+static func inward(p: Vector3, margin: float = 0.0) -> Vector3:
+	var v := Vector3.ZERO
+	if p.x < X_MIN + margin:
+		v.x += 1.0
+	elif p.x > X_MAX - margin:
+		v.x -= 1.0
+	if p.z < -HALF + margin:
+		v.z += 1.0
+	elif p.z > HALF - margin:
+		v.z -= 1.0
+	return v.normalized()
+
+
+## 가까운 섬 (없으면 null)
+static func island_near(p: Vector3, extra: float = 0.0) -> Island:
+	for isl: Island in islands:
+		var d := Vector2(p.x - isl.center.x, p.z - isl.center.z).length()
+		if d < maxf(isl.ra, isl.rb) + extra:
+			return isl
+	return null
+
+
+static func island_by_id(id: String) -> Island:
+	for isl: Island in islands:
+		if isl.id == id:
+			return isl
+	return null
+
+
+## 해안선까지의 대략적인 수평 거리 (파도 소리용)
+static func shore_dist(p: Vector3) -> float:
+	var best := absf(p.x - coast_x(p.z))
+	for isl: Island in islands:
+		var d := Vector2(p.x - isl.center.x, p.z - isl.center.z).length()
+		best = minf(best, absf(d - (isl.ra + isl.rb) * 0.5))
+	return best
+
+
+# ---------- 먼 섬 ----------
+
+static func _build_islands() -> void:
+	islands.clear()
+	for sp in ISLAND_SPECS:
+		var isl := Island.new()
+		isl.id = sp.id
+		isl.center = Vector3(sp.pos.x, 0.0, sp.pos.y)
+		isl.rot = sp.rot
+		isl.ra = sp.ra
+		isl.rb = sp.rb
+		isl.cell = sp.cell
+		var ex := (absf(isl.rb * cos(isl.rot)) + absf(isl.ra * sin(isl.rot))) * 1.5
+		var ez := (absf(isl.rb * sin(isl.rot)) + absf(isl.ra * cos(isl.rot))) * 1.5
+		isl.nx = int(ceil(ex * 2.0 / isl.cell)) + 1
+		isl.nz = int(ceil(ez * 2.0 / isl.cell)) + 1
+		isl.x0 = isl.center.x - ex
+		isl.z0 = isl.center.z - ez
+		isl.h.resize(isl.nx * isl.nz)
+		for j in isl.nz:
+			var z := isl.z0 + j * isl.cell
+			for i in isl.nx:
+				var x := isl.x0 + i * isl.cell
+				isl.h[j * isl.nx + i] = _island_raw(isl, x, z)
+		islands.append(isl)
+
+
+static func _island_raw(isl: Island, x: float, z: float) -> float:
+	var dx := x - isl.center.x
+	var dz := z - isl.center.z
+	var u := dx * cos(isl.rot) - dz * sin(isl.rot)     # 동(+) 서(-)
+	var v := dx * sin(isl.rot) + dz * cos(isl.rot)     # 남(+) 북(-)
+	var q := sqrt(pow(u / isl.rb, 2.0) + pow(v / isl.ra, 2.0))
+	q *= 1.0 + 0.1 * _n_coast.get_noise_2d(x * 2.0, z * 2.0)
+	var fine := _n_fine.get_noise_2d(x, z)
+	var mid := _n_mid.get_noise_2d(x, z)
+	match isl.id:
+		"seabird":
+			# 동쪽이 높은 절벽, 서쪽은 완만한 바위 비탈
+			var sea := -3.0 - 35.0 * smoothstep(1.0, 1.45, q)
+			if q >= 1.0:
+				return lerpf(0.8, sea, smoothstep(1.0, 1.08, q))
+			var side := smoothstep(-0.4, 0.5, u / isl.rb)
+			var top := 60.0 + 20.0 * clampf(u / isl.rb, -1.0, 1.0) + 7.0 * mid + 5.0 * (1.0 - pow(v / isl.ra, 2.0))
+			var m := 1.0 - smoothstep(lerpf(0.5, 0.9, side), 1.0, q)
+			return lerpf(0.8, top, m) + 1.5 * fine * m
+		"seals":
+			# 낮은 모래톱 + 북쪽 끝의 바위 언덕
+			var sea2 := -2.0 - 38.0 * smoothstep(1.0, 1.4, q)
+			var kn := isl.to_world(0.0, -isl.ra * 0.72)
+			var kd := Vector2(x - kn.x, z - kn.z).length()
+			var knoll := (1.0 - smoothstep(8.0, 40.0, kd)) * (15.0 + 4.0 * fine)
+			if q >= 1.0:
+				var hs := lerpf(0.5, sea2, smoothstep(1.0, 1.12, q))
+				return maxf(hs, knoll - 2.0) if knoll > 0.0 else hs
+			var m2 := 1.0 - smoothstep(0.2, 1.0, q)
+			return lerpf(0.5, 3.2 + 1.2 * mid, m2) + maxf(knoll - 2.0, 0.0)
+		"bats":
+			# 좁고 높은 바위 기둥 섬
+			var sea3 := -4.0 - 36.0 * smoothstep(1.0, 1.35, q)
+			if q >= 1.0:
+				return lerpf(0.5, sea3, smoothstep(1.0, 1.06, q))
+			var top3 := 104.0 + 14.0 * (1.0 - q * q) + 6.0 * mid
+			var m3 := 1.0 - smoothstep(0.8, 1.0, q)
+			return lerpf(0.5, top3, m3) + 2.0 * fine * m3
+	return -40.0
+
+
+## 섬의 특징 지점 (정상, 바닷새 번식지, 박쥐 동굴, 바위 언덕, 물범 쉼터)
+static func _island_features(rng: RandomNumberGenerator) -> void:
+	for isl: Island in islands:
+		# 정상
+		var best := Vector3(isl.center.x, -100.0, isl.center.z)
+		for j in isl.nz:
+			for i in isl.nx:
+				var hh := isl.h[j * isl.nx + i]
+				if hh > best.y:
+					best = Vector3(isl.x0 + i * isl.cell, hh, isl.z0 + j * isl.cell)
+		isl.info["top"] = best
+		perches.append({"pos": best + Vector3(0, 1.0, 0), "kind": "rock", "facing": Vector3.RIGHT})
+		match isl.id:
+			"seabird":
+				var col := isl.to_world(isl.rb * 0.97, 0.0)
+				col.y = 38.0
+				isl.info["colony"] = col
+				for k in 3:
+					var a := -0.9 + k * 0.9
+					var sp := isl.to_world(cos(a) * (isl.rb + 70.0), sin(a) * (isl.ra * 0.8))
+					_add_stack(rng, sp)
+			"seals":
+				var kn := isl.to_world(0.0, -isl.ra * 0.72)
+				kn.y = ground(kn.x, kn.z)
+				isl.info["knoll"] = kn
+				var outs := []
+				var tries := 0
+				while outs.size() < 10 and tries < 200:
+					tries += 1
+					var hp := isl.to_world(rng.randf_range(-isl.rb, isl.rb) * 0.8, rng.randf_range(-0.4, 0.9) * isl.ra)
+					hp.y = ground(hp.x, hp.z)
+					if hp.y > 0.6 and hp.y < 3.0 and normal(hp.x, hp.z).y > 0.97:
+						outs.append(hp)
+				isl.info["haulouts"] = outs
+			"bats":
+				var cave := isl.to_world(-isl.rb * 0.95, 0.0)
+				cave.y = 3.0
+				isl.info["cave"] = cave
+				_add_stack(rng, isl.to_world(-isl.rb - 60.0, isl.ra * 0.9))
+				_add_stack(rng, isl.to_world(isl.rb + 45.0, -isl.ra * 1.1))
+
+
+static func _add_stack(rng: RandomNumberGenerator, p: Vector3) -> void:
+	var base := ground(p.x, p.z)
+	if base > -2.0:
+		return
+	var s := {"pos": Vector3(p.x, base, p.z), "r": rng.randf_range(10.0, 17.0), "h": rng.randf_range(30.0, 60.0) - base}
+	stacks.append(s)
+	perches.append({"pos": Vector3(p.x, base + s.h + 0.3, p.z), "kind": "stack", "facing": Vector3.RIGHT})
 
 
 # ---------- 지형 특징 ----------
@@ -227,7 +450,7 @@ static func _compute_features() -> void:
 	thermals.clear()
 	for tp in [Vector2(-420, -620), Vector2(-700, 150), Vector2(-380, 520), Vector2(-260, 950), Vector2(-900, -300), Vector2(-150, -150)]:
 		var gy := ground(tp.x, tp.y)
-		thermals.append({"pos": Vector3(tp.x, gy, tp.y), "r": rng.randf_range(40.0, 60.0), "power": rng.randf_range(7.5, 10.5)})
+		thermals.append({"pos": Vector3(tp.x, gy, tp.y), "r": rng.randf_range(70.0, 90.0), "power": rng.randf_range(7.5, 10.5)})
 	# 앉을 곳
 	perches.clear()
 	perches.append({"pos": eyrie, "kind": "eyrie", "facing": eyrie_facing})
@@ -239,6 +462,7 @@ static func _compute_features() -> void:
 	for z in [-1000.0, -760.0, -560.0, -200.0, 40.0]:
 		var cx := coast_x(z) - 30.0
 		perches.append({"pos": Vector3(cx, ground(cx, z) + 1.2, z), "kind": "rock", "facing": Vector3.RIGHT})
+	_island_features(rng)
 
 
 static func nearest_perch(p: Vector3, radius: float) -> Dictionary:

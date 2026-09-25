@@ -56,6 +56,31 @@ const SPECS := {
 		"beak": Color(0.15, 0.13, 0.12), "tip": Color(0.1, 0.1, 0.1), "feet": Color(0.6, 0.5, 0.35),
 		"arm": 0.22, "hand": 0.22, "chord": 0.18, "point": 0.35, "body": 1.25, "tail": 0.13, "beak_len": 0.03, "malar": false, "tufts": true, "big_head": true,
 	},
+	"murrelet": {
+		"scale": 0.58, "back": Color(0.3, 0.33, 0.37), "wing": Color(0.27, 0.29, 0.33), "prim": Color(0.1, 0.1, 0.12),
+		"belly": Color(0.95, 0.95, 0.95), "under": Color(0.9, 0.9, 0.9), "head": Color(0.08, 0.08, 0.09), "cheek": Color(0.1, 0.1, 0.12),
+		"beak": Color(0.9, 0.86, 0.72), "tip": Color(0.6, 0.55, 0.45), "feet": Color(0.5, 0.55, 0.65),
+		"arm": 0.13, "hand": 0.15, "chord": 0.1, "point": 0.8, "body": 1.1, "tail": 0.07, "beak_len": 0.025, "malar": false,
+	},
+	"bat": {
+		"scale": 0.5, "back": Color(0.24, 0.17, 0.12), "wing": Color(0.17, 0.12, 0.09), "prim": Color(0.12, 0.09, 0.07),
+		"belly": Color(0.32, 0.24, 0.17), "under": Color(0.2, 0.15, 0.12), "head": Color(0.22, 0.16, 0.11), "cheek": Color(0.22, 0.16, 0.11),
+		"beak": Color(0.15, 0.1, 0.1), "tip": Color(0.1, 0.08, 0.08), "feet": Color(0.1, 0.08, 0.07),
+		"arm": 0.16, "hand": 0.2, "chord": 0.16, "point": 0.3, "body": 0.8, "tail": 0.05, "beak_len": 0.01, "malar": false, "tufts": true,
+	},
+	"eagle": {
+		"scale": 2.3, "back": Color(0.33, 0.24, 0.16), "wing": Color(0.3, 0.22, 0.15), "prim": Color(0.12, 0.1, 0.08),
+		"belly": Color(0.36, 0.26, 0.18), "under": Color(0.3, 0.22, 0.16), "head": Color(0.74, 0.66, 0.52), "cheek": Color(0.7, 0.62, 0.48),
+		"beak": Color(0.97, 0.82, 0.25), "tip": Color(0.9, 0.75, 0.2), "feet": Color(0.98, 0.8, 0.2),
+		"arm": 0.3, "hand": 0.3, "chord": 0.19, "point": 0.12, "body": 1.1, "tail": 0.13, "beak_len": 0.06, "malar": false,
+		"tail_top": Color(0.95, 0.94, 0.9), "tail_tip": Color(0.92, 0.9, 0.86), "tail_under": Color(0.95, 0.94, 0.9),
+	},
+	"crow": {
+		"scale": 0.95, "back": Color(0.07, 0.07, 0.09), "wing": Color(0.08, 0.08, 0.1), "prim": Color(0.05, 0.05, 0.06),
+		"belly": Color(0.09, 0.09, 0.11), "under": Color(0.1, 0.1, 0.12), "head": Color(0.06, 0.06, 0.08), "cheek": Color(0.07, 0.07, 0.09),
+		"beak": Color(0.05, 0.05, 0.05), "tip": Color(0.04, 0.04, 0.04), "feet": Color(0.06, 0.06, 0.06),
+		"arm": 0.2, "hand": 0.21, "chord": 0.14, "point": 0.45, "body": 1.05, "tail": 0.16, "beak_len": 0.05, "malar": false,
+	},
 }
 
 const VISUAL := 1.5   # 실제보다 크게 보여 줘서 먼 곳의 새도 읽히게 한다
@@ -312,9 +337,9 @@ func _tail_mesh() -> ArrayMesh:
 	var L: float = s["tail"]
 	var w0 := 0.028
 	var w1 := 0.055
-	var top_c: Color = s["back"]
-	var tip_c: Color = s["prim"]
-	var bot_c: Color = s["under"]
+	var top_c: Color = s.get("tail_top", s["back"])
+	var tip_c: Color = s.get("tail_tip", s["prim"])
+	var bot_c: Color = s.get("tail_under", s["under"])
 	var a := Vector3(-w0, 0, 0)
 	var b := Vector3(w0, 0, 0)
 	var c := Vector3(w1, -0.005, L)

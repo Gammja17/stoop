@@ -11,7 +11,7 @@ func _process(_d: float) -> void:
 
 func _w2m(p: Vector3) -> Vector2:
 	var half := WorldShape.HALF
-	return Vector2((p.x + half) / (half * 2.0) * size.x, (p.z + half) / (half * 2.0) * size.y)
+	return Vector2((p.x - WorldShape.X_MIN) / (WorldShape.X_MAX - WorldShape.X_MIN) * size.x, (p.z + half) / (half * 2.0) * size.y)
 
 
 func _draw() -> void:
@@ -25,6 +25,8 @@ func _draw() -> void:
 		[WorldShape.cliffs_center + Vector3(-80, 0, 0), Loc.t("map_cliffs"), Color(1, 0.95, 0.85)],
 		[WorldShape.lighthouse, Loc.t("map_lighthouse"), Color(1, 0.95, 0.85)],
 	]
+	for isl: WorldShape.Island in WorldShape.islands:
+		places.append([isl.center + Vector3(0, 0, isl.ra + 90.0), Loc.t("map_isl_" + isl.id), Color(0.85, 0.95, 1.0)])
 	for p in places:
 		var s := _w2m(p[0])
 		draw_string(font, s + Vector2(-80, 0), p[1], HORIZONTAL_ALIGNMENT_CENTER, 160, 18, p[2])
@@ -35,7 +37,7 @@ func _draw() -> void:
 	var e := _w2m(WorldShape.eyrie)
 	draw_circle(e, 7.0, Color(1, 0.8, 0.25))
 	draw_string(font, e + Vector2(10, 6), Loc.t("mk_eyrie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 0.8, 0.25))
-	for m in main.life.markers():
+	for m in main.life.markers() + main.prey_mgr.markers():
 		if m.label == Loc.t("mk_eyrie"):
 			continue
 		var s3 := _w2m(m.pos)
