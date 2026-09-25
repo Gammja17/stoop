@@ -29,6 +29,8 @@ const FILES := {
 const MUSIC := {
 	"title": "res://assets/audio/music/music_contemplation.mp3",
 	"calm": "res://assets/audio/music/music_aurora.mp3",
+	"hunt": "res://assets/audio/music/music_pursuit.ogg",
+	"danger": "res://assets/audio/music/music_battle.mp3",
 }
 
 var _streams: Dictionary = {}
@@ -40,6 +42,9 @@ var _next3d := 0
 var _music_a: AudioStreamPlayer
 var _music_b: AudioStreamPlayer
 var _music_cur := ""
+var music_gain := 0.0            # 지금 곡에만 더하는 음량(dB). 다이나믹 음악이 쓴다
+var _fade := [-80.0, -80.0]      # 두 음악 플레이어의 크로스페이드 음량(dB)
+var _cur_idx := 0
 var _waves: AudioStreamPlayer
 
 # 바람(절차적)
@@ -149,17 +154,31 @@ func music(key: String, fade: float = 2.5) -> void:
 	if key == _music_cur:
 		return
 	_music_cur = key
-	var incoming := _music_b if _music_a.playing and _music_a.volume_db > -40.0 else _music_a
-	var outgoing := _music_a if incoming == _music_b else _music_b
+	# 음량은 _fade로 섞고 _process에서 플레이어에 반영한다 (웹에서도 동작하도록 버스 효과 대신)
+	var inc_i := 1 if (_music_a.playing and float(_fade[0]) > -40.0) else 0
+	var out_i := 1 - inc_i
+	var incoming: AudioStreamPlayer = _music_b if inc_i == 1 else _music_a
 	var tw := create_tween().set_parallel(true)
 	if key != "" and MUSIC.has(key):
 		var st = load(MUSIC[key])
 		st.loop = true
 		incoming.stream = st
-		incoming.volume_db = -40.0
+		_fade[inc_i] = -40.0
 		incoming.play()
-		tw.tween_property(incoming, "volume_db", 0.0, fade)
-	tw.tween_property(outgoing, "volume_db", -80.0, fade)
+		tw.tween_method(func(v): _fade[inc_i] = v, -40.0, 0.0, fade)
+	_cur_idx = inc_i
+	tw.tween_method(func(v): _fade[out_i] = v, float(_fade[out_i]), -80.0, fade)
+
+
+func _update_music_volume() -> void:
+	if _music_a == null:
+		return
+	var i := 0
+	for m: AudioStreamPlayer in [_music_a, _music_b]:
+		m.volume_db = float(_fade[i]) + (music_gain if i == _cur_idx else 0.0)
+		if i != _cur_idx and float(_fade[i]) < -79.0 and m.playing:
+			m.stop()
+		i += 1
 
 
 func set_waves(level: float) -> void:
@@ -180,6 +199,7 @@ func set_wind_active(on: bool) -> void:
 # ---------- 바람 합성 ----------
 
 func _process(delta: float) -> void:
+	_update_music_volume()
 	if not wind_enabled or _wind_pb == null:
 		return
 	var target_amp := 0.03 + 0.95 * pow(clampf(wind_speed, 0.0, 1.0), 1.5)

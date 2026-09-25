@@ -132,6 +132,8 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	GameState.in_game = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Sfx.music("calm", 4.0)
+	_mus_state = "calm"
+	Sfx.music_gain = 0.0
 	var pro := int(GameState.data.get("prologue", -1))
 	if pro >= 0:
 		# 새 게임은 알부터, 이어하기는 첫 비행부터
@@ -228,6 +230,7 @@ func _process(delta: float) -> void:
 	hud.update_hud(self, delta)
 	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers()
 	_check_islands(delta)
+	_update_music(delta)
 	camera.eye_zoom = _eye
 	var kmh := falcon.kmh()
 	if kmh >= 300.0:
@@ -553,6 +556,56 @@ func _on_gull_hit(g: Gull) -> void:
 	hud.popup(Loc.t("gull_driven"), "", Color(0.9, 0.95, 1.0), 0.8)
 
 
+# ---------- 다이나믹 음악 ----------
+# 평소 잔잔 → 높이 오르면 추격곡이 작게 깔리고 → 급강하 속도에 따라 커지고 → 명중하면 최대.
+# 침입자·수리·부엉이·폭풍 중에는 전투곡.
+
+var _mus_state := ""
+var _mus_t := 0.0
+var _mus_after_hit := 0.0
+const MUSIC_RANK := {"calm": 0, "hunt": 1, "danger": 2}
+
+
+func _update_music(delta: float) -> void:
+	_mus_after_hit -= delta
+	var want := "calm"
+	var gain := 0.0
+	var f := falcon
+	var danger := false
+	if not prologue.active:
+		if life.rival and is_instance_valid(life.rival) and life.rival.mode != RivalFalcon.R.LEAVE:
+			danger = true
+		if life.owl and is_instance_valid(life.owl) and life.owl.mode != OwlRaider.O.FLEE:
+			danger = true
+		if prey_mgr.eagle and prey_mgr.eagle.visible and prey_mgr.eagle.mode == SeaEagle.E.CHASE:
+			danger = true
+		if float(day_night.cur.get("storm", 0.0)) > 0.5:
+			danger = true
+	var agl := f.global_position.y - WorldShape.floor_y(f.global_position.x, f.global_position.z)
+	var stoop := f.is_flying() and f.tuck > 0.5 and f.kmh() > 110.0
+	var high := f.is_flying() and agl > 180.0
+	if danger:
+		want = "danger"
+	elif stoop or high or _mus_after_hit > 0.0 or hud.reticle.target != null:
+		want = "hunt"
+		gain = -10.0 + clampf(agl / 450.0, 0.0, 1.0) * 4.0
+		if stoop:
+			gain = lerpf(-4.0, 1.0, clampf((f.kmh() - 110.0) / 200.0, 0.0, 1.0))
+		if _mus_after_hit > 0.0:
+			gain = 2.0
+	# 올라갈 땐 바로, 내려올 땐 몇 초 버틴 뒤 바꾼다 (들쑥날쑥하지 않게)
+	if want != _mus_state:
+		_mus_t += delta
+		var up: bool = _mus_state == "" or int(MUSIC_RANK[want]) > int(MUSIC_RANK.get(_mus_state, 0))
+		if _mus_t > (0.3 if up else 7.0):
+			_mus_state = want
+			_mus_t = 0.0
+			Sfx.music(want, 1.0 if up else 4.0)
+	else:
+		_mus_t = 0.0
+	Sfx.music_gain = lerpf(Sfx.music_gain, gain if _mus_state == "hunt" else 0.0, 1.0 - exp(-3.0 * delta))
+
+
 # ---------- 섬과 새 동물 ----------
 
 var _island_t := 0.0
@@ -662,6 +715,7 @@ func fox_pounce(fx: Fox) -> void:
 
 ## 타격감의 핵심: 멈춤(히트스톱) → 슬로모션 → 복귀
 func _strike_juice(p: Prey, kmh: float, perfect: bool) -> void:
+	_mus_after_hit = 6.0
 	var k := clampf((kmh - 80.0) / 220.0, 0.0, 1.0)
 	var pos := p.global_position
 	var sp: Dictionary = p.model.s
