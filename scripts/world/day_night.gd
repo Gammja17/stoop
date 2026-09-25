@@ -390,6 +390,7 @@ func update_visuals() -> void:
 		world.water_mat.set_shader_parameter("roughness_boost", clampf(float(cur["wind"]) / 12.0, 0.0, 1.0))
 		world.set_thermal_strength((1.0 - stars) * clampf(sun_e, 0.0, 1.0))
 		world.set_storm(st)
+		world.set_city_night(clampf(stars * 1.3 + (1.0 - light_k) * 0.4, 0.0, 1.0))
 	if rain_fx:
 		rain_fx.emitting = float(cur["rain"]) > 0.3
 		rain_fx.amount_ratio = lerpf(0.55, 1.0, float(cur.get("storm", 0.0)))

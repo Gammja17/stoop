@@ -30,6 +30,9 @@ static func _build_image() -> Image:
 			var x := WorldShape.X_MIN + (i + 0.5) * (span / w)
 			var z := -half + (j + 0.5) * (half * 2.0 / hh)
 			var h := WorldShape.ground(x, z)
+			if WorldShape.roof_at(x, z) > -1000.0:
+				img.set_pixel(i, j, Color(0.62, 0.62, 0.66) * (0.8 + clampf((h - WorldShape.CITY_LEVEL) / 200.0, 0.0, 0.5)))
+				continue
 			var c: Color
 			if h < 0.0:
 				var d := clampf(-h / 30.0, 0.0, 1.0)

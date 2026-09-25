@@ -25,6 +25,7 @@ func _draw() -> void:
 		[WorldShape.cliffs_center + Vector3(-80, 0, 0), Loc.t("map_cliffs"), Color(1, 0.95, 0.85)],
 		[WorldShape.lighthouse, Loc.t("map_lighthouse"), Color(1, 0.95, 0.85)],
 	]
+	places.append([Vector3(WorldShape.CITY_C.x, 0, WorldShape.CITY_C.y + WorldShape.CITY_HALF.y + 60.0), Loc.t("map_city"), Color(0.9, 0.9, 1.0)])
 	for isl: WorldShape.Island in WorldShape.islands:
 		places.append([isl.center + Vector3(0, 0, isl.ra + 90.0), Loc.t("map_isl_" + isl.id), Color(0.85, 0.95, 1.0)])
 	for p in places:

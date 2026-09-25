@@ -31,6 +31,15 @@ static var fields := Vector3.ZERO
 static var cliffs_center := Vector3.ZERO
 static var islands: Array = []       # Island (먼 바다의 섬)
 
+## 도시: 본섬 남서쪽의 평평하게 깎은 땅 위 빌딩 숲. 빌딩 옥상은 지면 높이로 취급한다
+## (옥상에 앉을 수 있고, 벽에 부딪히면 충돌, 카메라는 벽을 뚫지 않는다)
+const CITY_C := Vector2(-440.0, 1030.0)
+const CITY_HALF := Vector2(200.0, 230.0)
+const CITY_LEVEL := 42.0
+static var buildings: Array = []     # {min: Vector3, max: Vector3}
+static var city_tower := Vector3.ZERO
+static var _bgrid := {}              # Vector2i(20 m 칸) -> [빌딩 번호]
+
 ## 먼 섬: 자기만의 작은 높이 격자를 가진다 (본섬 격자는 그대로)
 const ISLAND_SPECS := [
 	{"id": "seabird", "pos": Vector2(1850, -850), "rot": 0.3, "ra": 240.0, "rb": 120.0, "cell": 6.0},
@@ -149,7 +158,33 @@ static func raw_height(x: float, z: float) -> float:
 		var flat := -0.45 + 1.0 * _n_mid.get_noise_2d(x * 1.6, z * 1.6) + 0.3 * _n_fine.get_noise_2d(x, z)
 		var w := bf * smoothstep(-560.0, -120.0, d) * smoothstep(0.0, 30.0, -d)
 		h = lerpf(h, flat, w)
+	var cm := city_mask(x, z)
+	if cm > 0.0:
+		h = lerpf(h, CITY_LEVEL, cm)
 	return h
+
+
+static func city_mask(x: float, z: float) -> float:
+	var d := maxf(absf(x - CITY_C.x) - CITY_HALF.x, absf(z - CITY_C.y) - CITY_HALF.y)
+	return 1.0 - smoothstep(-10.0, 70.0, d)
+
+
+static func in_city(p: Vector3, pad: float = 0.0) -> bool:
+	return absf(p.x - CITY_C.x) < CITY_HALF.x + pad and absf(p.z - CITY_C.y) < CITY_HALF.y + pad
+
+
+## 빌딩 옥상 높이 (빌딩이 없으면 -INF)
+static func roof_at(x: float, z: float) -> float:
+	if buildings.is_empty() or absf(x - CITY_C.x) > CITY_HALF.x + 5.0 or absf(z - CITY_C.y) > CITY_HALF.y + 5.0:
+		return -INF
+	var best := -INF
+	for i in _bgrid.get(Vector2i(floori(x / 20.0), floori(z / 20.0)), []):
+		var b: Dictionary = buildings[i]
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		if x >= mn.x and x <= mx.x and z >= mn.z and z <= mx.z:
+			best = maxf(best, mx.y)
+	return best
 
 
 static func _build_grid() -> void:
@@ -176,6 +211,8 @@ static func ground(x: float, z: float) -> float:
 		for isl: Island in islands:
 			if isl.contains(x, z):
 				return maxf(h, isl.sample(x, z))
+	elif h > 20.0:
+		h = maxf(h, roof_at(x, z))
 	return h
 
 
@@ -463,6 +500,61 @@ static func _compute_features() -> void:
 		var cx := coast_x(z) - 30.0
 		perches.append({"pos": Vector3(cx, ground(cx, z) + 1.2, z), "kind": "rock", "facing": Vector3.RIGHT})
 	_island_features(rng)
+	_build_city(rng)
+
+
+static func _build_city(rng: RandomNumberGenerator) -> void:
+	buildings.clear()
+	_bgrid.clear()
+	var c := Vector3(CITY_C.x, CITY_LEVEL, CITY_C.y)
+	# 가운데 랜드마크 타워 (송골매가 둥지를 트는 고층 빌딩처럼)
+	city_tower = c + Vector3(-20, 0, 10)
+	_add_building(city_tower, Vector2(15, 15), 220.0)
+	var block := 64.0
+	var street := 16.0
+	var x := CITY_C.x - CITY_HALF.x + 20.0
+	while x < CITY_C.x + CITY_HALF.x - 20.0 - block * 0.5:
+		var z := CITY_C.y - CITY_HALF.y + 20.0
+		while z < CITY_C.y + CITY_HALF.y - 20.0 - block * 0.5:
+			var bc := Vector3(x + block * 0.5, CITY_LEVEL, z + block * 0.5)
+			z += block + street
+			# 상승기류 자리는 광장으로 비워 둔다
+			var plaza := false
+			for t in thermals:
+				if Vector2(bc.x - t.pos.x, bc.z - t.pos.z).length() < t.r + 30.0:
+					plaza = true
+			if plaza or Vector2(bc.x - city_tower.x, bc.z - city_tower.z).length() < 40.0:
+				continue
+			var dist := Vector2(bc.x - c.x, bc.z - c.z).length() / CITY_HALF.length()
+			var tall := lerpf(150.0, 30.0, clampf(dist, 0.0, 1.0))
+			var n := rng.randi_range(1, 3)
+			for k in n:
+				var sz := Vector2(rng.randf_range(14.0, 30.0), rng.randf_range(14.0, 30.0))
+				if n == 1:
+					sz = Vector2(rng.randf_range(26.0, 40.0), rng.randf_range(26.0, 40.0))
+				var off := Vector3(rng.randf_range(-1, 1) * (block * 0.5 - sz.x * 0.5), 0.0, rng.randf_range(-1, 1) * (block * 0.5 - sz.y * 0.5))
+				_add_building(bc + off, sz * 0.5, tall * rng.randf_range(0.35, 1.0) + 14.0)
+		x += block + street
+	# 옥상 앉을 곳: 타워와 높은 빌딩들
+	var sorted := buildings.duplicate()
+	sorted.sort_custom(func(a, b): return a.max.y > b.max.y)
+	for i in mini(10, sorted.size()):
+		var b: Dictionary = sorted[i]
+		var top: Vector3 = (b.min + b.max) * 0.5
+		top.y = b.max.y + 0.3
+		perches.append({"pos": top, "kind": "roof", "facing": Vector3.RIGHT})
+
+
+static func _add_building(center: Vector3, half: Vector2, height: float) -> void:
+	var b := {"min": Vector3(center.x - half.x, CITY_LEVEL - 2.0, center.z - half.y), "max": Vector3(center.x + half.x, CITY_LEVEL + height, center.z + half.y)}
+	var idx := buildings.size()
+	buildings.append(b)
+	for gx in range(floori(b.min.x / 20.0), floori(b.max.x / 20.0) + 1):
+		for gz in range(floori(b.min.z / 20.0), floori(b.max.z / 20.0) + 1):
+			var key := Vector2i(gx, gz)
+			if not _bgrid.has(key):
+				_bgrid[key] = []
+			_bgrid[key].append(idx)
 
 
 static func nearest_perch(p: Vector3, radius: float) -> Dictionary:

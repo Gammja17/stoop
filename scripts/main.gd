@@ -675,6 +675,12 @@ func _check_islands(delta: float) -> void:
 	_island_t = 1.0
 	var st := GameState.stats()
 	var seen: Array = st.get("islands", [])
+	if WorldShape.in_city(falcon.global_position) and not st.get("city_seen", false):
+		st["city_seen"] = true
+		hud.popup(Loc.t("city_new"), Loc.t("map_city"), Color(0.8, 0.85, 1.0), 1.2)
+		GameState.say(Loc.t("city_hint"), "gold")
+		Sfx.play("chime", -4.0)
+		gain_xp(40)
 	var isl := WorldShape.island_near(falcon.global_position, 20.0)
 	if isl and not seen.has(isl.id):
 		seen.append(isl.id)

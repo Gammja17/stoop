@@ -37,6 +37,7 @@ func build() -> void:
 	_build_eyrie()
 	await get_tree().process_frame
 	_build_village()
+	_build_city()
 	await get_tree().process_frame
 	_build_vegetation()
 	await get_tree().process_frame
@@ -394,6 +395,100 @@ func bob_boats(t: float) -> void:
 		b.rotation.x = sin(t * 0.7 + i * 2.0) * 0.03
 
 
+# ---------- 도시 ----------
+
+var city_mat: ShaderMaterial
+
+
+func _build_city() -> void:
+	if WorldShape.buildings.is_empty():
+		return
+	city_mat = ShaderMaterial.new()
+	city_mat.shader = load("res://shaders/city.gdshader")
+	city_mat.set_shader_parameter("street_level", WorldShape.CITY_LEVEL)
+	var box := BoxMesh.new()
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = box
+	mm.instance_count = WorldShape.buildings.size()
+	var i := 0
+	for b in WorldShape.buildings:
+		var mn: Vector3 = b.min
+		var mx: Vector3 = b.max
+		mm.set_instance_transform(i, Transform3D(Basis.from_scale(mx - mn), (mn + mx) * 0.5))
+		i += 1
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.material_override = city_mat
+	mmi.name = "City"
+	add_child(mmi)
+	# 옥상 설비 (작은 상자들)
+	var extras := []
+	for b in WorldShape.buildings:
+		var mn2: Vector3 = b.min
+		var mx2: Vector3 = b.max
+		for k in _rng.randi_range(1, 3):
+			var sz := Vector3(_rng.randf_range(2.0, 5.0), _rng.randf_range(1.5, 3.5), _rng.randf_range(2.0, 5.0))
+			var p := Vector3(_rng.randf_range(mn2.x + 3.0, mx2.x - 3.0), mx2.y + sz.y * 0.5, _rng.randf_range(mn2.z + 3.0, mx2.z - 3.0))
+			extras.append(Transform3D(Basis.from_scale(sz), p))
+	var mm2 := MultiMesh.new()
+	mm2.transform_format = MultiMesh.TRANSFORM_3D
+	mm2.mesh = box
+	mm2.instance_count = extras.size()
+	for j in extras.size():
+		mm2.set_instance_transform(j, extras[j])
+	var mmi2 := MultiMeshInstance3D.new()
+	mmi2.multimesh = mm2
+	var xm := StandardMaterial3D.new()
+	xm.albedo_color = Color(0.5, 0.51, 0.53)
+	xm.roughness = 0.8
+	mmi2.material_override = xm
+	add_child(mmi2)
+	# 타워 꼭대기 안테나 + 빨간 항공등
+	var tw: Vector3 = WorldShape.city_tower
+	var top := WorldShape.roof_at(tw.x, tw.z)
+	var ant := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.2
+	cyl.bottom_radius = 0.6
+	cyl.height = 24.0
+	ant.mesh = cyl
+	var am := StandardMaterial3D.new()
+	am.albedo_color = Color(0.7, 0.7, 0.72)
+	ant.material_override = am
+	ant.position = Vector3(tw.x + 10.0, top + 12.0, tw.z + 10.0)   # 가운데(앉는 곳)를 비워 둔다
+	add_child(ant)
+	var lamp := MeshInstance3D.new()
+	var sp := SphereMesh.new()
+	sp.radius = 0.8
+	sp.height = 1.6
+	lamp.mesh = sp
+	var lm := StandardMaterial3D.new()
+	lm.albedo_color = Color(1, 0.15, 0.1)
+	lm.emission_enabled = true
+	lm.emission = Color(1, 0.1, 0.05)
+	lm.emission_energy_multiplier = 4.0
+	lamp.material_override = lm
+	lamp.position = Vector3(tw.x + 10.0, top + 24.5, tw.z + 10.0)
+	add_child(lamp)
+	# 거리 (아스팔트)
+	var street := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(WorldShape.CITY_HALF.x * 2.0 + 10.0, WorldShape.CITY_HALF.y * 2.0 + 10.0)
+	street.mesh = pm
+	var smat := StandardMaterial3D.new()
+	smat.albedo_color = Color(0.2, 0.2, 0.22)
+	smat.roughness = 0.9
+	street.material_override = smat
+	street.position = Vector3(WorldShape.CITY_C.x, WorldShape.CITY_LEVEL + 0.06, WorldShape.CITY_C.y)
+	add_child(street)
+
+
+func set_city_night(k: float) -> void:
+	if city_mat:
+		city_mat.set_shader_parameter("night", k)
+
+
 # ---------- 식생 ----------
 
 const NATURAL := {
@@ -462,6 +557,8 @@ func _build_vegetation() -> void:
 			var px := x + _rng.randf_range(-5, 5)
 			var pz := z + _rng.randf_range(-5, 5)
 			x += step
+			if WorldShape.in_city(Vector3(px, 0, pz), 40.0):
+				continue
 			var h := WorldShape.ground(px, pz)
 			if h < 3.0:
 				continue

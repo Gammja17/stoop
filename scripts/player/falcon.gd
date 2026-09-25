@@ -286,7 +286,8 @@ func _fly(delta: float) -> void:
 		speed += 3.0 * delta
 	# 상승기류 / 능선 바람
 	var was_in := in_thermal
-	updraft = _compute_updraft() * (1.0 - tuck)
+	# 빠르게 공격하며 지나갈 때는 기류에 밀려 올라가지 않게 (천천히 선회할 때만 제 힘)
+	updraft = _compute_updraft() * (1.0 - tuck) * (1.0 - smoothstep(24.0, 40.0, speed))
 	if in_thermal and not was_in:
 		Sfx.play("whoosh", -12.0, 0.7)
 	if flapping:
@@ -450,6 +451,19 @@ func _check_ground(_delta: float) -> void:
 		_crash(speed, false)
 		return
 	if p.y >= fy:
+		return
+	# 빌딩 벽: 옆에서 들어왔으면 옥상으로 올리지 않고 벽 밖으로 튕겨 떨어진다
+	var roof := WorldShape.roof_at(p.x, p.z)
+	if roof > -1000.0 and p.y < roof - 1.5 and _prev_pos.y < roof - 1.0:
+		global_position = Vector3(_prev_pos.x, p.y, _prev_pos.z)
+		if speed < 20.0:
+			# 느리면 기절하지 않고 벽에서 튕겨 나온다
+			dir = (Vector3(-dir.x, 0.0, -dir.z).normalized() + Vector3.UP * 0.3).normalized()
+			aim_yaw = atan2(-dir.x, -dir.z)
+			speed = maxf(speed * 0.6, 9.0)
+			Sfx.play("thud", -6.0, 1.2)
+			return
+		_crash(speed, false)
 		return
 	if water:
 		if speed < 26.0 and dir.y > -0.55:

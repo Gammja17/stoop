@@ -45,6 +45,8 @@ func setup(p_main) -> void:
 	habitats.append({"id": "murrelets", "kind": "murrelet", "center": sb.to_world(sb.rb + 200.0, 0.0), "r": 330.0, "size": [4, 7], "groups": [3, 3, 1, 1], "flock": true, "near": 1400.0})
 	habitats.append({"id": "rock_doves", "kind": "pigeon", "center": sb.center, "r": 260.0, "size": [3, 5], "groups": [1, 1, 1, 1], "flock": true, "near": 1400.0})
 	habitats.append({"id": "sands", "kind": "sandpiper", "center": se.center, "r": 360.0, "size": [14, 24], "groups": [1, 0, 3, 1], "flock": true, "near": 1400.0})
+	var cc := Vector3(WorldShape.CITY_C.x, 0, WorldShape.CITY_C.y)
+	habitats.append({"id": "city", "kind": "pigeon", "center": cc, "r": 240.0, "size": [5, 9], "groups": [3, 3, 3, 3], "flock": true, "near": 1300.0})
 	_spawn_island_life()
 	for i in 7:
 		var c := Vector3(WorldShape.coast_x(-1000.0 + i * 330.0) + randf_range(40, 200), 0, -1000.0 + i * 330.0)
@@ -197,7 +199,7 @@ func _spawn_island_life() -> void:
 	eagle = SeaEagle.new().setup(se.info.knoll)
 	add_child(eagle)
 	# 여우
-	for c2: Vector3 in [WorldShape.fields, WorldShape.village + Vector3(-300, 0, -200)]:
+	for c2: Vector3 in [WorldShape.fields, WorldShape.fields + Vector3(-150, 0, 380)]:
 		var fx: Fox = Fox.new().setup(c2, 280.0)
 		add_child(fx)
 		foxes.append(fx)

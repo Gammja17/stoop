@@ -47,7 +47,7 @@ func _land_point(c: Vector3, r: float) -> Vector3:
 		var rr := sqrt(randf()) * r
 		var p := c + Vector3(cos(a) * rr, 0, sin(a) * rr)
 		p.y = WorldShape.ground(p.x, p.z)
-		if p.y > 2.0 and WorldShape.normal(p.x, p.z).y > 0.8 and WorldShape.island_near(p, 100.0) == null:
+		if p.y > 2.0 and WorldShape.normal(p.x, p.z).y > 0.8 and WorldShape.island_near(p, 100.0) == null and not WorldShape.in_city(p, 30.0):
 			return p
 	var q := c
 	q.y = WorldShape.ground(c.x, c.z)
