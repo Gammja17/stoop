@@ -42,7 +42,8 @@ func close_all() -> void:
 	_hide_all()
 	if main and main.playing:
 		get_tree().paused = false
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		if not Settings.touch_mode:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func any_open() -> bool:

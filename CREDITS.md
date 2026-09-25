@@ -22,7 +22,7 @@
 | "Contemplation", "Aurora" (음악) | OpenGameArt CC0 | CC0 |
 | "Determined Pursuit" (급강하·추격 음악) | Emma_MA, OpenGameArt | CC0 |
 | "Battle Theme A" (위험 상황 음악) | cynicmusic, OpenGameArt | CC0 |
-| Sea and river wave sounds (파도) | OpenGameArt CC0 | CC0 |
+| Sea and river wave sounds (파도, 40초 반복 구간으로 잘라 씀) | OpenGameArt CC0 | CC0 |
 
 바람 소리, 송골매·갈매기·수리부엉이·새끼 울음, 타격 저음, 날갯짓, 물보라 소리는 `scripts/core/sfx.gd`에서 합성한다.
 

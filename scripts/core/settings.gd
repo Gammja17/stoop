@@ -21,6 +21,7 @@ var day_minutes := 8.0       # 낮 길이(실시간 분)
 var quality := 2             # 0 낮음, 1 보통, 2 높음
 var first_person := false    # 비행 시점 (V로 전환)
 var show_fps := false         # F3
+var touch_mode := false       # 터치 조작 중 (마우스를 잡지 않는다)
 var lang := "ko"
 
 # 각 항목: [종류, 코드]  k=키보드, m=마우스 버튼, j=패드 버튼, a=패드 축(트리거)
@@ -28,8 +29,8 @@ const ACTIONS := {
 	"flap": [["k", KEY_W], ["m", MOUSE_BUTTON_RIGHT], ["j", JOY_BUTTON_A]],
 	"tuck": [["k", KEY_SPACE], ["m", MOUSE_BUTTON_LEFT], ["a", JOY_AXIS_TRIGGER_RIGHT]],
 	"brake": [["k", KEY_S], ["j", JOY_BUTTON_LEFT_SHOULDER]],
-	"roll_left": [["k", KEY_A]],
-	"roll_right": [["k", KEY_D]],
+	"roll_left": [["k", KEY_A], ["j", JOY_BUTTON_DPAD_LEFT]],
+	"roll_right": [["k", KEY_D], ["j", JOY_BUTTON_DPAD_RIGHT]],
 	"interact": [["k", KEY_E], ["j", JOY_BUTTON_B]],
 	"eat": [["k", KEY_Q], ["j", JOY_BUTTON_X]],
 	"drop": [["k", KEY_F], ["j", JOY_BUTTON_Y]],
@@ -37,7 +38,7 @@ const ACTIONS := {
 	"falcon_eye": [["k", KEY_C], ["k", KEY_SHIFT], ["a", JOY_AXIS_TRIGGER_LEFT]],
 	"map": [["k", KEY_M], ["k", KEY_TAB], ["j", JOY_BUTTON_BACK]],
 	"view": [["k", KEY_V], ["j", JOY_BUTTON_RIGHT_STICK]],
-	"growth": [["k", KEY_P]],
+	"growth": [["k", KEY_P], ["j", JOY_BUTTON_DPAD_UP]],
 	"pause": [["k", KEY_ESCAPE], ["j", JOY_BUTTON_START]],
 }
 
@@ -109,6 +110,8 @@ func load_settings() -> void:
 	var cf := ConfigFile.new()
 	if OS.has_feature("web"):
 		quality = 1   # 웹은 보통이 기본 (브라우저는 느리다)
+	if OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile"):
+		quality = 0   # 폰은 낮음
 	if cf.load(PATH) != OK:
 		return
 	mouse_sens = cf.get_value("input", "mouse_sens", mouse_sens)

@@ -83,6 +83,8 @@ func _ready() -> void:
 	events.name = "Events"
 	add_child(events)
 	events.setup(self)
+	if TouchControls.wanted():
+		_enable_touch()
 	legend = LegendQuest.new()
 	legend.name = "Legend"
 	add_child(legend)
@@ -145,7 +147,8 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	hud.set_flight_widgets_visible(true)
 	playing = true
 	GameState.in_game = true
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if not Settings.touch_mode:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Sfx.music("calm", 4.0)
 	_mus_state = "calm"
 	events.reset()
@@ -295,7 +298,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.notify(Loc.t("view_first") if camera.first_person else Loc.t("view_third"), "info")
 		get_viewport().set_input_as_handled()
 		return
-	if event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseButton and event.pressed and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not Settings.touch_mode:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if not falcon.input_enabled:
 		return
@@ -590,6 +593,27 @@ func _on_gull_hit(g: Gull) -> void:
 	Fx.feathers(fx_root, g.global_position, falcon.velocity, Color(1, 1, 1), Color(0.7, 0.72, 0.75), 30, 0.8)
 	Sfx.play("hit_med", -2.0, 1.1)
 	hud.popup(Loc.t("gull_driven"), "", Color(0.9, 0.95, 1.0), 0.8)
+
+
+# ---------- 터치 ----------
+
+var touch: TouchControls
+
+
+func _enable_touch() -> void:
+	if touch:
+		return
+	Settings.touch_mode = true
+	touch = load("res://scenes/ui/touch_controls.tscn").instantiate()
+	touch.main = self
+	$UILayer.add_child(touch)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _input(event: InputEvent) -> void:
+	# 태블릿 등: 처음 화면을 만지면 터치 조작을 켠다
+	if event is InputEventScreenTouch and touch == null:
+		_enable_touch()
 
 
 # ---------- 성장 ----------

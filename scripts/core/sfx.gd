@@ -27,10 +27,10 @@ const FILES := {
 }
 
 const MUSIC := {
-	"title": "res://assets/audio/music/music_contemplation.mp3",
-	"calm": "res://assets/audio/music/music_aurora.mp3",
+	"title": "res://assets/audio/music/music_contemplation.ogg",
+	"calm": "res://assets/audio/music/music_aurora.ogg",
 	"hunt": "res://assets/audio/music/music_pursuit.ogg",
-	"danger": "res://assets/audio/music/music_battle.mp3",
+	"danger": "res://assets/audio/music/music_battle.ogg",
 }
 
 var _streams: Dictionary = {}
@@ -99,7 +99,7 @@ func _ready() -> void:
 	_waves = AudioStreamPlayer.new()
 	_waves.bus = "Ambience"
 	_waves.volume_db = -80.0
-	var ws = load("res://assets/audio/ambience/waves_vistula.mp3")
+	var ws = load("res://assets/audio/ambience/waves_loop.ogg")
 	if ws:
 		ws.loop = true
 		_waves.stream = ws

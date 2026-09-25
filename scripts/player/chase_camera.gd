@@ -208,6 +208,11 @@ func _first_person(real_dt: float) -> void:
 func _orbit(real_dt: float) -> void:
 	if target == null:
 		return
+	# 앉아 있을 때: 패드 스틱·터치 스틱으로도 둘러본다 (이륙 방향이 된다)
+	var st := Vector2(Input.get_joy_axis(0, JOY_AXIS_RIGHT_X) + Input.get_joy_axis(0, JOY_AXIS_LEFT_X), Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)) + Falcon.touch_stick
+	if st.length() > 0.2:
+		orbit_yaw -= st.x * 2.2 * real_dt * Settings.mouse_sens
+		orbit_pitch = clampf(orbit_pitch - st.y * 1.2 * real_dt, -1.2, 0.5)
 	var b := Basis(Vector3.UP, orbit_yaw) * Basis(Vector3.RIGHT, orbit_pitch)
 	var pivot := target.global_position + Vector3.UP * 0.3
 	var pos := _clip(pivot, target.global_position + b * Vector3(0, 0.3, orbit_dist))

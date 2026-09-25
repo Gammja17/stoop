@@ -61,6 +61,7 @@ var thermal_k := 0.0
 var _aim_idle := 0.0         # 마지막 조준 입력 뒤 지난 시간
 var _circle_sign := 0.0
 var _tap_t := {"l": -1.0, "r": -1.0}
+static var touch_stick := Vector2.ZERO   # 모바일 가상 스틱 (패드 왼쪽 스틱과 같이 쓴다)
 
 var speed_mult := 1.0
 var stamina_regen_mult := 1.0
@@ -194,7 +195,9 @@ func _read_input(delta: float) -> Dictionary:
 	# 패드 스틱 조준
 	var jx := Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
 	var jy := Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)
-	var jv := Vector2(jx, jy)
+	var jv := Vector2(jx, jy) + touch_stick
+	jx = jv.x
+	jy = jv.y
 	if jv.length() > 0.18:
 		_aim_idle = 0.0
 		var rate := 2.2 * Settings.mouse_sens * delta
