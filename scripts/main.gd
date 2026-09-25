@@ -6,6 +6,7 @@ extends Node3D
 @onready var falcon: Falcon = $Falcon
 @onready var camera: ChaseCamera = $Camera
 @onready var prey_mgr: PreyManager = $PreyManager
+var events: EventDirector
 @onready var life: LifeDirector = $Life
 @onready var streaks: SpeedStreaks = $Streaks
 @onready var fx_root: Node3D = $FX
@@ -53,7 +54,7 @@ func _ready() -> void:
 	falcon.crashed.connect(_on_crashed)
 	falcon.landed.connect(_on_landed)
 	falcon.took_off.connect(_on_took_off)
-	falcon.display_dive.connect(func(pk, rolls): life.on_display_dive(pk, rolls))
+	falcon.display_dive.connect(func(pk, rolls): life.on_display_dive(pk, rolls); events.on_display(pk, rolls))
 	prey_mgr.contact.connect(_on_contact)
 	prey_mgr.gull_hit.connect(_on_gull_hit)
 	prey_mgr.mobber_hit.connect(_on_mobber_hit)
@@ -72,6 +73,10 @@ func _ready() -> void:
 	falcon.input_enabled = false
 	day_night.set_time(7.2)
 	prey_mgr.setup(self)
+	events = EventDirector.new()
+	events.name = "Events"
+	add_child(events)
+	events.setup(self)
 	life.setup(self)
 	prologue.setup(self, dialog)
 	camera.cine_center = WorldShape.eyrie
@@ -133,6 +138,7 @@ func _begin(fresh: bool, new_generation: bool = false) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	Sfx.music("calm", 4.0)
 	_mus_state = "calm"
+	events.reset()
 	Sfx.music_gain = 0.0
 	var pro := int(GameState.data.get("prologue", -1))
 	if pro >= 0:
@@ -148,9 +154,12 @@ func _rebuild_falcon(spec: String = "") -> void:
 		falcon.model.queue_free()
 	falcon.model = BirdModel.new()
 	falcon.add_child(falcon.model)
+	var extra := 1.0
 	if spec == "":
-		spec = "falcon_f" if GameState.falcon().get("sex", "m") == "f" else "falcon"
-	falcon.model.setup(spec)
+		var fs := Growth.falcon_spec()
+		spec = fs[0]
+		extra = fs[1]
+	falcon.model.setup(spec, extra)
 	falcon.apply_stats()
 	falcon.carrying = null
 	camera._apply_body_visibility()
@@ -227,8 +236,9 @@ func _process(delta: float) -> void:
 	_update_prompts()
 	if not prologue.active:
 		life.update(delta)
+		events.update(delta)
 	hud.update_hud(self, delta)
-	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers()
+	hud.reticle.markers = prologue.markers() if prologue.active else life.markers() + prey_mgr.markers() + events.markers()
 	_check_islands(delta)
 	_update_music(delta)
 	camera.eye_zoom = _eye
@@ -259,6 +269,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("map"):
 		menus.open_map()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("growth") and not prologue.active:
+		menus.open_growth("game")
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("view"):
@@ -492,17 +506,22 @@ func _on_contact(p: Prey, how: String) -> void:
 				GameState.record_prey(p.kind)
 				if perfect:
 					GameState.stats()["perfect"] = int(GameState.stats().get("perfect", 0)) + 1
-				_strike_juice(p, kmh, perfect)
+				var xp := int((15 + int(kmh / 12.0) + (20 if perfect else 0)) * float(XP_KIND.get(p.kind, 1.0)))
+				_strike_juice(p, kmh, perfect, xp)
+				gain_xp(xp)
 				prologue.on_struck(p)
 				_check_hunt_records(p, perfect)
+				events.on_kill(p, kmh)
 			elif p.t.get("small", false) or (p.kind != "duck" and p.state == Prey.S.FLY):
 				# 느린 속도로는 방심한 먹잇감이나 작은 새만 낚아챌 수 있다
 				p.take(falcon)
 				falcon.grab(p)
 				GameState.record_prey(p.kind)
 				_bind_juice(p, Loc.t("bind"))
+				gain_xp(int(10 * float(XP_KIND.get(p.kind, 1.0))))
 				prologue.on_struck(p)
 				_check_hunt_records(p, false)
+				events.on_kill(p, kmh)
 			elif p.kind != "duck":
 				# 도망치는 비둘기는 느린 추격으로는 몸을 틀어 빠져나간다
 				p._juke(falcon.velocity)
@@ -520,8 +539,10 @@ func _on_contact(p: Prey, how: String) -> void:
 			p.take(falcon)
 			falcon.grab(p)
 			_bind_juice(p, Loc.t("air_catch"))
+			gain_xp(10)
 			prologue.on_caught(p)
 			Records.unlock("air_catch")
+			events.on_catch(p)
 		"pickup":
 			p.take(falcon)
 			falcon.grab(p)
@@ -554,6 +575,30 @@ func _on_gull_hit(g: Gull) -> void:
 	Fx.feathers(fx_root, g.global_position, falcon.velocity, Color(1, 1, 1), Color(0.7, 0.72, 0.75), 30, 0.8)
 	Sfx.play("hit_med", -2.0, 1.1)
 	hud.popup(Loc.t("gull_driven"), "", Color(0.9, 0.95, 1.0), 0.8)
+
+
+# ---------- 성장 ----------
+
+const XP_KIND := {"duck": 1.5, "murrelet": 1.5, "bat": 1.3, "golden": 2.0}
+
+
+func gain_xp(n: int) -> void:
+	if prologue.active or n <= 0:
+		return
+	var ups := Growth.add_xp(n)
+	if ups > 0:
+		hud.popup(Loc.t("level_up") % Growth.level(), Loc.t("level_up_sub"), Color(1, 0.85, 0.3), 2.2)
+		Sfx.play("chime_big", 0.0, 1.1)
+		falcon.apply_stats()
+
+
+## 깃털 색을 바꾸면 모델만 다시 만든다 (쥔 먹이는 그대로)
+func refresh_plumage() -> void:
+	if prologue.active:
+		return
+	var c := falcon.carrying
+	_rebuild_falcon("")
+	falcon.carrying = c
 
 
 # ---------- 다이나믹 음악 ----------
@@ -628,6 +673,7 @@ func _check_islands(delta: float) -> void:
 		hud.popup(Loc.t("island_new"), Loc.t("map_isl_" + isl.id), Color(0.7, 0.9, 1.0), 1.2)
 		GameState.say(Loc.t("island_hint_" + isl.id), "gold")
 		Sfx.play("chime", -4.0)
+		gain_xp(40)
 		if seen.size() >= WorldShape.islands.size():
 			Records.unlock("islands")
 
@@ -652,6 +698,7 @@ func mobbed_peck(m: Mobber) -> void:
 
 func _on_mobber_hit(m: Mobber) -> void:
 	m.knocked(falcon.velocity)
+	gain_xp(5)
 	camera.add_trauma(0.3)
 	var sp := BirdModel.resolve("crow" if m.species == "crow" else "gull")
 	Fx.feathers(fx_root, m.global_position, falcon.velocity, sp.back, sp.belly, 24, 0.7)
@@ -680,6 +727,7 @@ func eagle_steal(e: SeaEagle) -> void:
 func _on_eagle_hit(e: SeaEagle) -> void:
 	e.take_hit(falcon.velocity)
 	Records.unlock("eagle")
+	gain_xp(40)
 	var sp := BirdModel.resolve("eagle")
 	Fx.feathers(fx_root, e.global_position, falcon.velocity, sp.back, sp.belly, 45, 1.0)
 	Fx.ring(fx_root, e.global_position, falcon.dir, 6.0, Color(1, 0.9, 0.8, 0.7))
@@ -714,7 +762,7 @@ func fox_pounce(fx: Fox) -> void:
 
 
 ## 타격감의 핵심: 멈춤(히트스톱) → 슬로모션 → 복귀
-func _strike_juice(p: Prey, kmh: float, perfect: bool) -> void:
+func _strike_juice(p: Prey, kmh: float, perfect: bool, xp: int = 0) -> void:
 	_mus_after_hit = 6.0
 	var k := clampf((kmh - 80.0) / 220.0, 0.0, 1.0)
 	var pos := p.global_position
@@ -733,7 +781,7 @@ func _strike_juice(p: Prey, kmh: float, perfect: bool) -> void:
 		Input.start_joy_vibration(0, 0.5 + 0.5 * k, 1.0, 0.25 + 0.2 * k)
 	var title := Loc.t("perfect") if perfect else Loc.t("strike")
 	var col := Color(1.0, 0.55, 0.2) if perfect else Color(1, 0.84, 0.3)
-	hud.popup(title, "%d km/h" % int(kmh), col, 1.1)
+	hud.popup(title, "%d km/h   +%d" % [int(kmh), xp] if xp > 0 else "%d km/h" % int(kmh), col, 1.1)
 	if juice_lock:
 		return
 	juice_lock = true

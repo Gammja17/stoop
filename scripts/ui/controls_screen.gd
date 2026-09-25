@@ -15,6 +15,7 @@ const ROWS := [
 	["ctrl_call", "ctrl_call_d"],
 	["ctrl_map", "ctrl_map_d"],
 	["ctrl_view", "ctrl_view_d"],
+	["ctrl_growth", "ctrl_growth_d"],
 	["ctrl_pause", "ctrl_pause_d"],
 	["ctrl_misc", "ctrl_misc_d"],
 ]

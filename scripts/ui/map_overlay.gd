@@ -37,7 +37,7 @@ func _draw() -> void:
 	var e := _w2m(WorldShape.eyrie)
 	draw_circle(e, 7.0, Color(1, 0.8, 0.25))
 	draw_string(font, e + Vector2(10, 6), Loc.t("mk_eyrie"), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 0.8, 0.25))
-	for m in main.life.markers() + main.prey_mgr.markers():
+	for m in main.life.markers() + main.prey_mgr.markers() + main.events.markers():
 		if m.label == Loc.t("mk_eyrie"):
 			continue
 		var s3 := _w2m(m.pos)

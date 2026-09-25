@@ -11,6 +11,8 @@ const TYPES := {
 	"duck": {"model": "duck", "cruise": 19.0, "max": 25.0, "agility": 0.3, "strike": 40.0, "food": 58.0, "weight": 0.7, "detect": 95.0, "juke": 6.0, "alt": [5.0, 45.0], "small": false, "water_escape": true},
 	# 바다쇠오리: 수면 바로 위를 낮고 빠르게 난다. 매가 가까이 오면 물속으로 잠수한다
 	"murrelet": {"model": "murrelet", "cruise": 19.0, "max": 25.0, "agility": 0.35, "strike": 18.0, "food": 24.0, "weight": 0.22, "detect": 75.0, "juke": 6.0, "alt": [2.5, 9.0], "small": false, "water_escape": true, "dive": true, "no_glide": true},
+	# 황금 비둘기: 돌발 이벤트. 빠르고 예민하다
+	"golden": {"model": "golden", "cruise": 20.0, "max": 30.0, "agility": 0.75, "strike": 22.0, "food": 45.0, "weight": 0.35, "detect": 90.0, "juke": 11.0, "alt": [25.0, 90.0], "small": false},
 	# 박쥐: 해 질 녘 동굴에서 쏟아져 나온다. 지그재그로 날아 맞히기 어렵다
 	"bat": {"model": "bat", "cruise": 10.0, "max": 15.0, "agility": 0.9, "strike": 6.0, "food": 7.0, "weight": 0.03, "detect": 30.0, "juke": 9.0, "alt": [6.0, 55.0], "small": true, "erratic": true, "no_glide": true},
 }

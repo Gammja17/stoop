@@ -21,7 +21,7 @@ var _carry_t := 0.0
 var prev := Vector3.ZERO
 
 
-func setup(c: Vector3) -> Gull:
+func setup(c: Vector3, spec: String = "gull") -> Gull:
 	center = c
 	radius = randf_range(60.0, 140.0)
 	alt = randf_range(20.0, 60.0)
@@ -30,7 +30,7 @@ func setup(c: Vector3) -> Gull:
 	prev = position
 	model = BirdModel.new()
 	add_child(model)
-	model.setup("gull")
+	model.setup(spec)
 	return self
 
 
@@ -95,7 +95,7 @@ func _process(delta: float) -> void:
 				state = G.SOAR
 	var p2 := global_position
 	var gy := WorldShape.floor_y(p2.x, p2.z)
-	if p2.y < gy + 6.0 and state != G.FETCH:
+	if p2.y < gy + 6.0 and state != G.FETCH and state != G.HARASS:
 		desired.y += 6.0
 	vel = vel.lerp(desired, 1.0 - exp(-1.8 * delta))
 	position += vel * delta

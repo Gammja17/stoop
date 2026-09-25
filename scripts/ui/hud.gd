@@ -61,6 +61,9 @@ func update_hud(main, delta: float) -> void:
 	hp.value = float(fd.get("health", 100.0))
 	food.value = float(fd.get("energy", 50.0))
 	stam.value = f.stamina / maxf(f.max_stamina, 1.0) * 100.0
+	var gd := Growth.g()
+	$Bars/XpLabel.text = "Lv.%d" % int(gd.level) + ("  +%d" % int(gd.points) if int(gd.points) > 0 else "")
+	$Bars/Xp.value = float(gd.xp) / float(Growth.xp_needed(int(gd.level))) * 100.0
 	_pulse += delta * 6.0
 	var low := float(fd.get("energy", 50.0)) < 20.0
 	food.modulate = Color(1, 1, 1, 0.55 + 0.45 * absf(sin(_pulse))) if low else Color.WHITE

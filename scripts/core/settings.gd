@@ -36,6 +36,7 @@ const ACTIONS := {
 	"falcon_eye": [["k", KEY_C], ["k", KEY_SHIFT], ["a", JOY_AXIS_TRIGGER_LEFT]],
 	"map": [["k", KEY_M], ["k", KEY_TAB], ["j", JOY_BUTTON_BACK]],
 	"view": [["k", KEY_V], ["j", JOY_BUTTON_RIGHT_STICK]],
+	"growth": [["k", KEY_P]],
 	"pause": [["k", KEY_ESCAPE], ["j", JOY_BUTTON_START]],
 }
 

@@ -7,6 +7,7 @@ func _ready() -> void:
 	var v := $Center/Panel/VBox
 	v.get_node("Resume").pressed.connect(func(): menus.resume())
 	v.get_node("Map").pressed.connect(func(): Sfx.play("ui_click"); menus.open_map())
+	v.get_node("Growth").pressed.connect(func(): Sfx.play("ui_click"); menus.open_growth("pause"))
 	v.get_node("Records").pressed.connect(func(): Sfx.play("ui_click"); menus.open_records("pause"))
 	v.get_node("Settings").pressed.connect(func(): Sfx.play("ui_click"); menus.open_settings("pause"))
 	v.get_node("Controls").pressed.connect(func(): Sfx.play("ui_click"); menus.open_controls("pause"))
@@ -22,6 +23,7 @@ func open() -> void:
 	v.get_node("Title").text = Loc.t("p_title")
 	v.get_node("Resume").text = Loc.t("p_resume")
 	v.get_node("Map").text = Loc.t("p_map")
+	v.get_node("Growth").text = Loc.t("t_growth") + ("  (%d)" % int(Growth.g().points) if int(Growth.g().points) > 0 else "")
 	v.get_node("Records").text = Loc.t("t_records")
 	v.get_node("Settings").text = Loc.t("t_settings")
 	v.get_node("Controls").text = Loc.t("t_controls")

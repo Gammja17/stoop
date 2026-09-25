@@ -106,6 +106,7 @@ func _check_combat() -> void:
 			L()["rival_hits"] = rival.hits
 			_combat_juice(rival.global_position, "rival")
 			main.hud.popup(Loc.t("hit_rival"), "%d / %d" % [rival.hits, rival.need_hits], Color(1, 0.8, 0.3), 0.8)
+			main.gain_xp(15)
 	if owl and is_instance_valid(owl) and owl.mode != OwlRaider.O.FLEE:
 		if PreyManager.seg_dist(a - owl.prev, b - owl.global_position) < 3.2 and f.speed > 18.0:
 			owl.take_hit(f.velocity)
@@ -662,6 +663,7 @@ func _on_rival_hit_player() -> void:
 func _on_rival_defeated() -> void:
 	L()["territory"] = true
 	Records.unlock("territory")
+	main.gain_xp(60)
 	main.hud.popup(Loc.t("territory_won"), Loc.t("territory_won_sub"), Color(1, 0.85, 0.35), 2.2)
 	Sfx.play("chime_big", 0.0)
 	if not L().mate.get("has", false):
@@ -686,6 +688,7 @@ func _on_owl_reached() -> void:
 func _on_owl_driven() -> void:
 	_owl_tonight = false
 	Records.unlock("owl")
+	main.gain_xp(50)
 	main.hud.popup(Loc.t("owl_driven"), "", Color(1, 0.85, 0.35), 1.6)
 	Sfx.play("chime_big", -2.0)
 
@@ -706,6 +709,9 @@ func resolve_night_while_sleeping() -> void:
 
 func _refresh_objectives() -> void:
 	var items := []
+	var ev: Dictionary = main.events.objective()
+	if not ev.is_empty():
+		items.append(ev)
 	var l := L()
 	var s := season()
 	var fd := GameState.falcon()

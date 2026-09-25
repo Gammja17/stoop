@@ -71,6 +71,13 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="bar_xp"]
+bg_color = Color(1, 0.8, 0.3, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [sub_resource type="StyleBoxFlat" id="bar_stam"]
 bg_color = Color(0.5, 0.83, 0.96, 1)
 corner_radius_top_left = 3
@@ -149,7 +156,7 @@ anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
 offset_left = 36.0
-offset_top = -170.0
+offset_top = -200.0
 offset_right = 420.0
 offset_bottom = -34.0
 grow_vertical = 0
@@ -201,6 +208,21 @@ size_flags_vertical = 4
 theme_override_styles/background = SubResource("bar_bg")
 theme_override_styles/fill = SubResource("bar_stam")
 value = 100.0
+show_percentage = false
+
+[node name="XpLabel" type="Label" parent="Bars"]
+layout_mode = 2
+text = "Lv.1"
+label_settings = SubResource("ls_bar")
+
+[node name="Xp" type="ProgressBar" parent="Bars"]
+custom_minimum_size = Vector2(260, 8)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("bar_bg")
+theme_override_styles/fill = SubResource("bar_xp")
+value = 0.0
 show_percentage = false
 
 [node name="CarryLabel" type="Label" parent="Bars"]

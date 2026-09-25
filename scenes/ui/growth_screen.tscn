@@ -1,0 +1,178 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/growth_screen.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/BlackHanSans-Regular.ttf" id="2_big"]
+
+[sub_resource type="LabelSettings" id="ls_title"]
+font = ExtResource("2_big")
+font_size = 56
+font_color = Color(1, 0.86, 0.4, 1)
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="ls_body"]
+font_size = 22
+font_color = Color(0.9, 0.92, 0.94, 1)
+
+[node name="Growth" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.02, 0.03, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(860, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "TITLE"
+label_settings = SubResource("ls_title")
+horizontal_alignment = 1
+
+[node name="Level" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+horizontal_alignment = 1
+
+[node name="Skills" type="GridContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/h_separation = 20
+theme_override_constants/v_separation = 14
+columns = 3
+
+[node name="Name_dive" type="Label" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="Pips_dive" type="Label" parent="Center/Panel/VBox/Skills"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+
+[node name="Up_dive" type="Button" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "+"
+
+[node name="Name_wing" type="Label" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="Pips_wing" type="Label" parent="Center/Panel/VBox/Skills"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+
+[node name="Up_wing" type="Button" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "+"
+
+[node name="Name_stamina" type="Label" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="Pips_stamina" type="Label" parent="Center/Panel/VBox/Skills"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+
+[node name="Up_stamina" type="Button" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "+"
+
+[node name="Name_eye" type="Label" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="Pips_eye" type="Label" parent="Center/Panel/VBox/Skills"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+
+[node name="Up_eye" type="Button" parent="Center/Panel/VBox/Skills"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "+"
+
+[node name="PlumageLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+
+[node name="Plumage" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Pl_default" type="Button" parent="Center/Panel/VBox/Plumage"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "default"
+
+[node name="Pl_silver" type="Button" parent="Center/Panel/VBox/Plumage"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "silver"
+
+[node name="Pl_rufous" type="Button" parent="Center/Panel/VBox/Plumage"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "rufous"
+
+[node name="Pl_dark" type="Button" parent="Center/Panel/VBox/Plumage"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "dark"
+
+[node name="Pl_white" type="Button" parent="Center/Panel/VBox/Plumage"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "white"
+
+[node name="Back" type="Button" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "Back"

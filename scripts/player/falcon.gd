@@ -63,6 +63,8 @@ var _circle_sign := 0.0
 var _tap_t := {"l": -1.0, "r": -1.0}
 
 var speed_mult := 1.0
+var stamina_regen_mult := 1.0
+var eye_mult := 1.0          # 매의 눈 성장: 탐지·조준 보조 거리
 var agility_mult := 1.0
 var power_mult := 1.0
 
@@ -85,8 +87,8 @@ var accel_smooth := 0.0
 func _ready() -> void:
 	model = BirdModel.new()
 	add_child(model)
-	var female: bool = GameState.falcon().get("sex", "m") == "f"
-	model.setup("falcon_f" if female else "falcon")
+	var fs := Growth.falcon_spec()
+	model.setup(fs[0], fs[1])
 	apply_stats()
 	add_child(WingTrails.new())
 
@@ -102,6 +104,12 @@ func apply_stats() -> void:
 	var lifespan := int(f.get("lifespan", 6))
 	var old := clampf(float(age - (lifespan - 2)) * 0.12, 0.0, 0.3)
 	max_stamina = 160.0 + float(f.get("bonus_stamina", 0.0)) - old * 60.0
+	# 성장
+	speed_mult += 0.06 * Growth.rank("dive")
+	agility_mult += 0.05 * Growth.rank("wing")
+	max_stamina += 30.0 * Growth.rank("stamina")
+	stamina_regen_mult = 1.0 + 0.1 * Growth.rank("stamina")
+	eye_mult = 1.0 + 0.2 * Growth.rank("eye")
 
 
 func aim_dir() -> Vector3:
@@ -237,7 +245,7 @@ func _fly(delta: float) -> void:
 	if assist_target and is_instance_valid(assist_target):
 		var to := assist_target.global_position - global_position
 		var dist := to.length()
-		if dist < ASSIST_RANGE and dist > 0.5:
+		if dist < ASSIST_RANGE * eye_mult and dist > 0.5:
 			var a2 := dir.angle_to(to)
 			if a2 < deg_to_rad(14.0) and a2 > 0.0001:
 				var ax := dir.cross(to)
@@ -261,7 +269,7 @@ func _fly(delta: float) -> void:
 		if speed < lim:
 			acc += FLAP_ACCEL * (1.0 - carry_w * 0.45)
 	else:
-		var regen := 18.0 if GameState.falcon().get("energy", 50.0) > 20.0 else 8.0
+		var regen := (18.0 if GameState.falcon().get("energy", 50.0) > 20.0 else 8.0) * stamina_regen_mult
 		stamina = minf(stamina + regen * delta, max_stamina)
 	speed = maxf(speed + acc * delta, 0.0)
 	# 실속

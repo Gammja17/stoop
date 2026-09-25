@@ -138,7 +138,7 @@ def main():
 
     # 일시정지
     s = panel_scene("res://scripts/ui/pause_menu.gd", "Pause", 520)
-    for b in ["Resume", "Map", "Records", "Settings", "Controls", "SkipTut", "SaveQuit", "QuitGame"]:
+    for b in ["Resume", "Map", "Growth", "Records", "Settings", "Controls", "SkipTut", "SaveQuit", "QuitGame"]:
         btn(s, b)
     s.write("pause_menu.tscn")
 
@@ -170,6 +170,21 @@ def main():
     s.node("List", "VBoxContainer", V + "/Scroll", layout_mode=2, size_flags_horizontal=3, theme_override_constants__separation=10)
     btn(s, "Back")
     s.write("records_screen.tscn")
+
+    # 성장
+    s = panel_scene("res://scripts/ui/growth_screen.gd", "Growth", 860)
+    s.node("Level", "Label", V, layout_mode=2, text="", label_settings='SubResource("ls_body")', horizontal_alignment=1)
+    s.node("Skills", "GridContainer", V, layout_mode=2, theme_override_constants__h_separation=20, theme_override_constants__v_separation=14, columns=3)
+    for sk in ["dive", "wing", "stamina", "eye"]:
+        s.node("Name_" + sk, "Label", V + "/Skills", custom_minimum_size="Vector2(600, 0)", layout_mode=2, text="", label_settings='SubResource("ls_body")', autowrap_mode=3)
+        s.node("Pips_" + sk, "Label", V + "/Skills", layout_mode=2, text="", label_settings='SubResource("ls_body")')
+        s.node("Up_" + sk, "Button", V + "/Skills", custom_minimum_size="Vector2(60, 0)", layout_mode=2, text="+")
+    s.node("PlumageLabel", "Label", V, layout_mode=2, text="", label_settings='SubResource("ls_body")')
+    s.node("Plumage", "HBoxContainer", V, layout_mode=2, theme_override_constants__separation=8)
+    for pl in ["default", "silver", "rufous", "dark", "white"]:
+        s.node("Pl_" + pl, "Button", V + "/Plumage", layout_mode=2, size_flags_horizontal=3, toggle_mode=True, text=pl)
+    btn(s, "Back")
+    s.write("growth_screen.tscn")
 
     # 둥지(휴식)
     s = panel_scene("res://scripts/ui/rest_menu.gd", "Rest", 620)
@@ -211,11 +226,11 @@ def main():
 
     # 메뉴 묶음
     out = ["[gd_scene format=3]", "", '[ext_resource type="Script" path="res://scripts/ui/menus.gd" id="1_script"]']
-    names = ["loading", "title_menu", "new_game_menu", "pause_menu", "settings_menu", "controls_screen", "credits_screen", "rest_menu", "summary_screen", "death_screen", "map_screen", "records_screen"]
+    names = ["loading", "title_menu", "new_game_menu", "pause_menu", "settings_menu", "controls_screen", "credits_screen", "rest_menu", "summary_screen", "death_screen", "map_screen", "records_screen", "growth_screen"]
     for i, n in enumerate(names):
         out.append(f'[ext_resource type="PackedScene" path="res://scenes/ui/{n}.tscn" id="{i + 2}_{n}"]')
     out += ["", '[node name="Menus" type="Control"]', "process_mode = 3", "layout_mode = 3", "anchors_preset = 15", "anchor_right = 1.0", "anchor_bottom = 1.0", "grow_horizontal = 2", "grow_vertical = 2", "mouse_filter = 2", 'script = ExtResource("1_script")', ""]
-    node_names = ["Loading", "Title", "NewGame", "Pause", "Settings", "Controls", "Credits", "Rest", "Summary", "Death", "Map", "Records"]
+    node_names = ["Loading", "Title", "NewGame", "Pause", "Settings", "Controls", "Credits", "Rest", "Summary", "Death", "Map", "Records", "Growth"]
     for i, (n, nn) in enumerate(zip(names, node_names)):
         out += [f'[node name="{nn}" parent="." instance=ExtResource("{i + 2}_{n}")]', "visible = false", "layout_mode = 1", ""]
     with open(os.path.join(ROOT, "menus.tscn"), "w", encoding="utf-8") as f:

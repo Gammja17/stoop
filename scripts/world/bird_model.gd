@@ -56,6 +56,28 @@ const SPECS := {
 		"beak": Color(0.15, 0.13, 0.12), "tip": Color(0.1, 0.1, 0.1), "feet": Color(0.6, 0.5, 0.35),
 		"arm": 0.22, "hand": 0.22, "chord": 0.18, "point": 0.35, "body": 1.25, "tail": 0.13, "beak_len": 0.03, "malar": false, "tufts": true, "big_head": true,
 	},
+	"pl_silver": {
+		"base": "falcon", "back": Color(0.5, 0.55, 0.61), "wing": Color(0.55, 0.59, 0.65), "prim": Color(0.24, 0.26, 0.3), "head": Color(0.3, 0.33, 0.37),
+	},
+	"pl_rufous": {
+		"base": "falcon", "back": Color(0.42, 0.29, 0.22), "wing": Color(0.47, 0.33, 0.25), "prim": Color(0.2, 0.14, 0.11),
+		"belly": Color(0.93, 0.74, 0.58), "under": Color(0.86, 0.69, 0.56), "head": Color(0.2, 0.13, 0.1),
+	},
+	"pl_dark": {
+		"base": "falcon", "back": Color(0.09, 0.1, 0.12), "wing": Color(0.11, 0.12, 0.14), "prim": Color(0.04, 0.04, 0.05),
+		"belly": Color(0.5, 0.48, 0.45), "under": Color(0.42, 0.4, 0.38), "head": Color(0.04, 0.04, 0.05), "cheek": Color(0.45, 0.43, 0.4),
+	},
+	"pl_white": {
+		"base": "falcon", "back": Color(0.9, 0.91, 0.92), "wing": Color(0.92, 0.93, 0.94), "prim": Color(0.5, 0.52, 0.56),
+		"belly": Color(0.98, 0.98, 0.97), "under": Color(0.95, 0.95, 0.96), "head": Color(0.84, 0.85, 0.87), "cheek": Color(0.98, 0.98, 0.98), "tip": Color(0.35, 0.37, 0.4),
+	},
+	"golden": {
+		"base": "pigeon", "back": Color(0.95, 0.72, 0.2), "wing": Color(0.98, 0.78, 0.28), "prim": Color(0.75, 0.5, 0.1),
+		"belly": Color(1.0, 0.85, 0.45), "under": Color(1.0, 0.88, 0.55), "head": Color(0.9, 0.62, 0.15), "cheek": Color(0.95, 0.7, 0.2),
+	},
+	"hunter": {
+		"base": "falcon", "scale": 1.1, "back": Color(0.3, 0.26, 0.24), "wing": Color(0.34, 0.29, 0.26), "belly": Color(0.86, 0.8, 0.7),
+	},
 	"murrelet": {
 		"scale": 0.58, "back": Color(0.3, 0.33, 0.37), "wing": Color(0.27, 0.29, 0.33), "prim": Color(0.1, 0.1, 0.12),
 		"belly": Color(0.95, 0.95, 0.95), "under": Color(0.9, 0.9, 0.9), "head": Color(0.08, 0.08, 0.09), "cheek": Color(0.1, 0.1, 0.12),
@@ -118,7 +140,7 @@ static func resolve(id: String) -> Dictionary:
 	return sp
 
 
-func setup(id: String) -> BirdModel:
+func setup(id: String, extra_scale: float = 1.0) -> BirdModel:
 	spec_id = id
 	s = resolve(id)
 	if _mat == null:
@@ -130,7 +152,7 @@ func setup(id: String) -> BirdModel:
 		_cache[id] = _build_meshes()
 	var m: Dictionary = _cache[id]
 	var sc: float = s["scale"]
-	scale = Vector3.ONE * sc * VISUAL
+	scale = Vector3.ONE * sc * VISUAL * extra_scale
 	body_node = Node3D.new()
 	add_child(body_node)
 	_mi(body_node, m["body"])

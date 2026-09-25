@@ -16,6 +16,7 @@ var _return_to := ""
 @onready var death = $Death
 @onready var map = $Map
 @onready var records = $Records
+@onready var growth = $Growth
 
 
 func _ready() -> void:
@@ -97,6 +98,15 @@ func open_records(from: String) -> void:
 	records.open()
 
 
+## from: "pause"(일시정지에서) / "game"(P 키, 닫으면 바로 게임으로)
+func open_growth(from: String) -> void:
+	_return_to = from
+	_pause_game()
+	_hide_all()
+	growth.open()
+	Sfx.play("ui_open", -6.0)
+
+
 func open_credits() -> void:
 	_return_to = "title"
 	_hide_all()
@@ -109,6 +119,8 @@ func back() -> void:
 	match _return_to:
 		"pause":
 			pause.open()
+		"game":
+			close_all()
 		_:
 			title.open()
 

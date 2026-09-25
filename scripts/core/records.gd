@@ -27,9 +27,12 @@ const LIST := [
 	["murrelet", "잠수하기 전에", "Before the Dive", "바다쇠오리를 잡는다", "Catch an ancient murrelet"],
 	["bat", "황혼의 사냥꾼", "Dusk Hunter", "박쥐를 잡는다", "Catch a bat"],
 	["eagle", "거인에 맞서", "Giant Slayer", "흰꼬리수리를 들이받아 쫓아낸다", "Ram a white-tailed eagle away"],
+	["golden", "황금 사냥", "Golden Hunt", "황금 비둘기를 잡는다", "Catch the golden pigeon"],
+	["challenger", "도전자", "Challenger", "돌발 도전 10번 성공", "Win 10 challenges"],
 ]
 
 var _done := {}
+var _plumage := {}
 var fledged_total := 0
 
 
@@ -40,6 +43,8 @@ func _ready() -> void:
 		for id in cf.get_section_keys("done") if cf.has_section("done") else []:
 			_done[id] = true
 		fledged_total = int(cf.get_value("stats", "fledged_total", 0))
+		for id in cf.get_section_keys("plumage") if cf.has_section("plumage") else []:
+			_plumage[id] = true
 
 
 func _save() -> void:
@@ -47,6 +52,8 @@ func _save() -> void:
 	for id in _done:
 		cf.set_value("done", id, true)
 	cf.set_value("stats", "fledged_total", fledged_total)
+	for id in _plumage:
+		cf.set_value("plumage", id, true)
 	cf.save(PATH)
 
 
@@ -62,6 +69,18 @@ func unlock(id: String) -> void:
 	unlocked.emit(id)
 	GameState.say(Loc.t("record_unlocked") % title(id), "gold")
 	Sfx.play("chime_big", -4.0, 1.2)
+
+
+func has_plumage(id: String) -> bool:
+	return id == "default" or _plumage.has(id)
+
+
+func unlock_plumage(id: String) -> void:
+	if has_plumage(id):
+		return
+	_plumage[id] = true
+	_save()
+	GameState.say(Loc.t("plumage_unlocked") % Loc.t("pl_" + id), "gold")
 
 
 func add_fledged(n: int) -> void:
