@@ -1,0 +1,8 @@
+# Godot
+.godot/
+*.tmp
+
+# 개발 산출물
+.shots/
+builds/
+docs/stoop_tour.avi

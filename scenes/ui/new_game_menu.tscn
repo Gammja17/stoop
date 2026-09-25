@@ -1,0 +1,155 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/new_game_menu.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/BlackHanSans-Regular.ttf" id="2_big"]
+
+[sub_resource type="LabelSettings" id="ls_title"]
+font = ExtResource("2_big")
+font_size = 56
+font_color = Color(1, 0.86, 0.4, 1)
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="ls_body"]
+font_size = 22
+font_color = Color(0.9, 0.92, 0.94, 1)
+
+[node name="NewGame" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.02, 0.03, 0.6)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(760, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "TITLE"
+label_settings = SubResource("ls_title")
+horizontal_alignment = 1
+
+[node name="NameLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "이름"
+label_settings = SubResource("ls_body")
+
+[node name="Name" type="LineEdit" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "바람"
+max_length = 10
+
+[node name="SexLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "성별"
+label_settings = SubResource("ls_body")
+
+[node name="Sex" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Male" type="Button" parent="Center/Panel/VBox/Sex"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "수컷"
+
+[node name="Female" type="Button" parent="Center/Panel/VBox/Sex"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "암컷"
+
+[node name="SexDesc" type="Label" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(700, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="DiffLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "난이도"
+label_settings = SubResource("ls_body")
+
+[node name="Diff" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Normal" type="Button" parent="Center/Panel/VBox/Diff"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "보통"
+
+[node name="Wild" type="Button" parent="Center/Panel/VBox/Diff"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "야생"
+
+[node name="DiffDesc" type="Label" parent="Center/Panel/VBox"]
+custom_minimum_size = Vector2(700, 0)
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_body")
+autowrap_mode = 3
+
+[node name="TutLabel" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+text = "시작"
+label_settings = SubResource("ls_body")
+
+[node name="Tut" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TutOn" type="Button" parent="Center/Panel/VBox/Tut"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "알에서부터"
+
+[node name="TutOff" type="Button" parent="Center/Panel/VBox/Tut"]
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "건너뛰기"
+
+[node name="Row" type="HBoxContainer" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="Back" type="Button" parent="Center/Panel/VBox/Row"]
+layout_mode = 2
+text = "뒤로"
+
+[node name="Start" type="Button" parent="Center/Panel/VBox/Row"]
+layout_mode = 2
+text = "시작"

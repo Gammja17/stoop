@@ -1,0 +1,72 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/map_screen.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/BlackHanSans-Regular.ttf" id="2_big"]
+[ext_resource type="Script" path="res://scripts/ui/map_overlay.gd" id="3_overlay"]
+
+[sub_resource type="LabelSettings" id="ls_title"]
+font = ExtResource("2_big")
+font_size = 44
+font_color = Color(1, 0.86, 0.4, 1)
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.5)
+
+[node name="Map" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.01, 0.02, 0.03, 0.8)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Center/VBox"]
+layout_mode = 2
+text = "지도"
+label_settings = SubResource("ls_title")
+horizontal_alignment = 1
+
+[node name="Frame" type="PanelContainer" parent="Center/VBox"]
+layout_mode = 2
+
+[node name="Image" type="TextureRect" parent="Center/VBox/Frame"]
+custom_minimum_size = Vector2(820, 820)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Overlay" type="Control" parent="Center/VBox/Frame/Image"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_overlay")
+
+[node name="Hint" type="Label" parent="Center/VBox"]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d3a57"/>
+      <stop offset="1" stop-color="#e8915a"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#sky)"/>
+  <!-- stooping falcon: teardrop body diving down-right -->
+  <g transform="rotate(35 64 64)">
+    <path d="M64 14 C74 30 76 52 72 76 L64 112 L56 76 C52 52 54 30 64 14 Z" fill="#2b3440"/>
+    <path d="M64 30 C69 40 70 54 67 70 L64 86 L61 70 C58 54 59 40 64 30 Z" fill="#dfe3e6"/>
+    <circle cx="64" cy="24" r="7" fill="#2b3440"/>
+    <path d="M60 20 L64 12 L68 20 Z" fill="#f2c230"/>
+  </g>
+  <path d="M18 104 L50 96" stroke="#ffffff" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+  <path d="M10 88 L40 82" stroke="#ffffff" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>
+</svg>

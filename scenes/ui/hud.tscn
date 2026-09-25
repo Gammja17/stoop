@@ -1,0 +1,339 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Script" path="res://scripts/ui/reticle.gd" id="2_ret"]
+[ext_resource type="Script" path="res://scripts/ui/compass.gd" id="3_cmp"]
+[ext_resource type="FontFile" path="res://assets/fonts/BlackHanSans-Regular.ttf" id="4_big"]
+
+[sub_resource type="LabelSettings" id="ls_clock"]
+font_size = 24
+outline_size = 4
+outline_color = Color(0, 0, 0, 0.55)
+
+[sub_resource type="LabelSettings" id="ls_speed"]
+font = ExtResource("4_big")
+font_size = 78
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="ls_unit"]
+font_size = 20
+font_color = Color(1, 1, 1, 0.75)
+outline_size = 4
+outline_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="LabelSettings" id="ls_info"]
+font_size = 22
+outline_size = 4
+outline_color = Color(0, 0, 0, 0.55)
+
+[sub_resource type="LabelSettings" id="ls_popup"]
+font = ExtResource("4_big")
+font_size = 92
+font_color = Color(1, 0.84, 0.3, 1)
+outline_size = 12
+outline_color = Color(0.1, 0.05, 0, 0.75)
+
+[sub_resource type="LabelSettings" id="ls_popup_sub"]
+font = ExtResource("4_big")
+font_size = 36
+outline_size = 8
+outline_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="LabelSettings" id="ls_prompt"]
+font_size = 26
+outline_size = 6
+outline_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="LabelSettings" id="ls_bar"]
+font_size = 18
+outline_size = 4
+outline_color = Color(0, 0, 0, 0.6)
+
+[sub_resource type="StyleBoxFlat" id="bar_bg"]
+bg_color = Color(0, 0, 0, 0.45)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_hp"]
+bg_color = Color(0.88, 0.3, 0.26, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_food"]
+bg_color = Color(0.96, 0.66, 0.22, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_stam"]
+bg_color = Color(0.5, 0.83, 0.96, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="hint_panel"]
+content_margin_left = 22.0
+content_margin_top = 12.0
+content_margin_right = 22.0
+content_margin_bottom = 12.0
+bg_color = Color(0.04, 0.05, 0.06, 0.78)
+border_width_left = 4
+border_color = Color(0.95, 0.76, 0.19, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="HUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="Reticle" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_ret")
+
+[node name="TopLeft" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 26.0
+offset_right = 700.0
+offset_bottom = 420.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Clock" type="Label" parent="TopLeft"]
+layout_mode = 2
+text = "봄 · 1일째 · 06:30"
+label_settings = SubResource("ls_clock")
+
+[node name="Objectives" type="VBoxContainer" parent="TopLeft"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Compass" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -330.0
+offset_top = 16.0
+offset_right = 330.0
+offset_bottom = 66.0
+grow_horizontal = 2
+mouse_filter = 2
+script = ExtResource("3_cmp")
+
+[node name="Bars" type="GridContainer" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 36.0
+offset_top = -170.0
+offset_right = 420.0
+offset_bottom = -34.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="HpLabel" type="Label" parent="Bars"]
+layout_mode = 2
+text = "체력"
+label_settings = SubResource("ls_bar")
+
+[node name="Hp" type="ProgressBar" parent="Bars"]
+custom_minimum_size = Vector2(260, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("bar_bg")
+theme_override_styles/fill = SubResource("bar_hp")
+value = 100.0
+show_percentage = false
+
+[node name="FoodLabel" type="Label" parent="Bars"]
+layout_mode = 2
+text = "포만감"
+label_settings = SubResource("ls_bar")
+
+[node name="Food" type="ProgressBar" parent="Bars"]
+custom_minimum_size = Vector2(260, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("bar_bg")
+theme_override_styles/fill = SubResource("bar_food")
+value = 70.0
+show_percentage = false
+
+[node name="StamLabel" type="Label" parent="Bars"]
+layout_mode = 2
+text = "스태미나"
+label_settings = SubResource("ls_bar")
+
+[node name="Stam" type="ProgressBar" parent="Bars"]
+custom_minimum_size = Vector2(260, 14)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/background = SubResource("bar_bg")
+theme_override_styles/fill = SubResource("bar_stam")
+value = 100.0
+show_percentage = false
+
+[node name="CarryLabel" type="Label" parent="Bars"]
+layout_mode = 2
+label_settings = SubResource("ls_bar")
+
+[node name="Carry" type="Label" parent="Bars"]
+layout_mode = 2
+label_settings = SubResource("ls_bar")
+
+[node name="Speedo" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -330.0
+offset_top = -200.0
+offset_right = -40.0
+offset_bottom = -30.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = -4
+alignment = 2
+
+[node name="Speed" type="Label" parent="Speedo"]
+layout_mode = 2
+text = "0"
+label_settings = SubResource("ls_speed")
+horizontal_alignment = 2
+
+[node name="Unit" type="Label" parent="Speedo"]
+layout_mode = 2
+text = "km/h"
+label_settings = SubResource("ls_unit")
+horizontal_alignment = 2
+
+[node name="Alt" type="Label" parent="Speedo"]
+layout_mode = 2
+text = "고도 0 m"
+label_settings = SubResource("ls_info")
+horizontal_alignment = 2
+
+[node name="Vsi" type="Label" parent="Speedo"]
+layout_mode = 2
+text = ""
+label_settings = SubResource("ls_info")
+horizontal_alignment = 2
+
+[node name="Prompt" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -250.0
+offset_right = 400.0
+offset_bottom = -200.0
+grow_horizontal = 2
+grow_vertical = 0
+label_settings = SubResource("ls_prompt")
+horizontal_alignment = 1
+
+[node name="Popup" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -600.0
+offset_top = -300.0
+offset_right = 600.0
+offset_bottom = -130.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = -6
+alignment = 1
+
+[node name="Main" type="Label" parent="Popup"]
+layout_mode = 2
+label_settings = SubResource("ls_popup")
+horizontal_alignment = 1
+
+[node name="Sub" type="Label" parent="Popup"]
+layout_mode = 2
+label_settings = SubResource("ls_popup_sub")
+horizontal_alignment = 1
+
+[node name="Feed" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -560.0
+offset_top = 110.0
+offset_right = -36.0
+offset_bottom = 420.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Hint" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -380.0
+offset_top = 84.0
+offset_right = 380.0
+offset_bottom = 150.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("hint_panel")
+
+[node name="Text" type="Label" parent="Hint"]
+layout_mode = 2
+text = "힌트"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Fade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)

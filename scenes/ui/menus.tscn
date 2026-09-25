@@ -1,0 +1,74 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menus.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/ui/loading.tscn" id="2_loading"]
+[ext_resource type="PackedScene" path="res://scenes/ui/title_menu.tscn" id="3_title_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/new_game_menu.tscn" id="4_new_game_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="5_pause_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="6_settings_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/controls_screen.tscn" id="7_controls_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/credits_screen.tscn" id="8_credits_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/rest_menu.tscn" id="9_rest_menu"]
+[ext_resource type="PackedScene" path="res://scenes/ui/summary_screen.tscn" id="10_summary_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/death_screen.tscn" id="11_death_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/map_screen.tscn" id="12_map_screen"]
+[ext_resource type="PackedScene" path="res://scenes/ui/records_screen.tscn" id="13_records_screen"]
+
+[node name="Menus" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="Loading" parent="." instance=ExtResource("2_loading")]
+visible = false
+layout_mode = 1
+
+[node name="Title" parent="." instance=ExtResource("3_title_menu")]
+visible = false
+layout_mode = 1
+
+[node name="NewGame" parent="." instance=ExtResource("4_new_game_menu")]
+visible = false
+layout_mode = 1
+
+[node name="Pause" parent="." instance=ExtResource("5_pause_menu")]
+visible = false
+layout_mode = 1
+
+[node name="Settings" parent="." instance=ExtResource("6_settings_menu")]
+visible = false
+layout_mode = 1
+
+[node name="Controls" parent="." instance=ExtResource("7_controls_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Credits" parent="." instance=ExtResource("8_credits_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Rest" parent="." instance=ExtResource("9_rest_menu")]
+visible = false
+layout_mode = 1
+
+[node name="Summary" parent="." instance=ExtResource("10_summary_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Death" parent="." instance=ExtResource("11_death_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Map" parent="." instance=ExtResource("12_map_screen")]
+visible = false
+layout_mode = 1
+
+[node name="Records" parent="." instance=ExtResource("13_records_screen")]
+visible = false
+layout_mode = 1
