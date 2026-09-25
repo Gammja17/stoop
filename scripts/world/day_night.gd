@@ -23,18 +23,20 @@ const KEYS := [
 ]
 
 const WEATHER := {
-	"clear": {"cloud": 0.35, "fog": 1.0, "wind": 4.0, "rain": 0.0, "snow": 0.0, "light": 1.0},
-	"cloudy": {"cloud": 0.75, "fog": 1.4, "wind": 6.0, "rain": 0.0, "snow": 0.0, "light": 0.7},
-	"windy": {"cloud": 0.5, "fog": 1.0, "wind": 11.0, "rain": 0.0, "snow": 0.0, "light": 0.95},
-	"rain": {"cloud": 0.95, "fog": 2.6, "wind": 8.0, "rain": 1.0, "snow": 0.0, "light": 0.45},
-	"fog": {"cloud": 0.6, "fog": 5.0, "wind": 2.0, "rain": 0.0, "snow": 0.0, "light": 0.65},
-	"snow": {"cloud": 0.9, "fog": 2.4, "wind": 5.0, "rain": 0.0, "snow": 1.0, "light": 0.6},
+	"clear": {"cloud": 0.35, "fog": 1.0, "wind": 4.0, "rain": 0.0, "snow": 0.0, "light": 1.0, "storm": 0.0},
+	"cloudy": {"cloud": 0.75, "fog": 1.4, "wind": 6.0, "rain": 0.0, "snow": 0.0, "light": 0.7, "storm": 0.0},
+	"windy": {"cloud": 0.5, "fog": 1.0, "wind": 11.0, "rain": 0.0, "snow": 0.0, "light": 0.95, "storm": 0.0},
+	"rain": {"cloud": 0.95, "fog": 2.6, "wind": 8.0, "rain": 1.0, "snow": 0.0, "light": 0.45, "storm": 0.0},
+	"fog": {"cloud": 0.6, "fog": 5.0, "wind": 2.0, "rain": 0.0, "snow": 0.0, "light": 0.65, "storm": 0.0},
+	"snow": {"cloud": 0.9, "fog": 2.4, "wind": 5.0, "rain": 0.0, "snow": 1.0, "light": 0.6, "storm": 0.0},
+	# 폭풍: 하루 중간에 먹구름이 몰려오며 시작된다 (LifeDirector가 시각을 정한다)
+	"storm": {"cloud": 1.0, "fog": 3.2, "wind": 15.0, "rain": 1.0, "snow": 0.0, "light": 0.3, "storm": 1.0},
 }
 
 const SEASON_WEATHER := [
-	{"clear": 5, "cloudy": 3, "windy": 2, "rain": 2, "fog": 2},
-	{"clear": 7, "cloudy": 2, "windy": 1, "rain": 2, "fog": 0},
-	{"clear": 4, "cloudy": 3, "windy": 3, "rain": 2, "fog": 2},
+	{"clear": 5, "cloudy": 3, "windy": 2, "rain": 2, "fog": 2, "storm": 1},
+	{"clear": 7, "cloudy": 2, "windy": 1, "rain": 1, "fog": 0, "storm": 2},
+	{"clear": 4, "cloudy": 3, "windy": 3, "rain": 2, "fog": 2, "storm": 2},
 	{"clear": 3, "cloudy": 3, "windy": 2, "snow": 4, "fog": 1},
 ]
 
@@ -45,7 +47,15 @@ var sky_mat: ShaderMaterial
 var world: WorldBuilder
 
 var paused := false
-var cur := {"cloud": 0.35, "fog": 1.0, "wind": 4.0, "rain": 0.0, "snow": 0.0, "light": 1.0}
+var cur := {"cloud": 0.35, "fog": 1.0, "wind": 4.0, "rain": 0.0, "snow": 0.0, "light": 1.0, "storm": 0.0}
+var gust := 0.0             # 폭풍 돌풍: 위아래로 흔드는 바람 (m/s)
+var _gust_noise := FastNoiseLite.new()
+var _t := 0.0
+var _bolt_t := 6.0
+var _flash := 0.0
+var _bolt: MeshInstance3D
+var _bolt_life := 0.0
+var _cam: Node3D
 var wind := Vector3(-4.0, 0.0, 0.0)
 var _wind_angle := PI
 var _last_hour := -1
@@ -79,6 +89,9 @@ func setup(p_env: Environment, p_sun: DirectionalLight3D, p_moon: DirectionalLig
 	env.sky = sky
 	env.background_mode = Environment.BG_SKY
 	_make_precip(cam)
+	_cam = cam
+	_make_bolt()
+	_gust_noise.frequency = 0.35
 	apply_weather(GameState.data.get("weather", "clear"), true)
 	update_visuals()
 
@@ -218,9 +231,91 @@ func apply_weather(w: String, instant: bool = false) -> void:
 
 
 func _process(delta: float) -> void:
+	_t += delta
+	var st: float = cur.get("storm", 0.0)
+	_update_storm(delta, st)
 	update_visuals()
-	var ws: float = cur["wind"]
+	var ws: float = cur["wind"] * (1.0 + 0.5 * st * _gust_noise.get_noise_1d(_t * 40.0))
 	wind = Vector3(cos(_wind_angle), 0.0, sin(_wind_angle)) * ws
+
+
+# ---------- 폭풍: 돌풍과 번개 ----------
+
+func _make_bolt() -> void:
+	_bolt = MeshInstance3D.new()
+	_bolt.mesh = ImmediateMesh.new()
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(0.85, 0.9, 1.0)
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.disable_fog = true
+	_bolt.material_override = m
+	_bolt.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_bolt.visible = false
+	world.add_child(_bolt)
+
+
+func _update_storm(delta: float, st: float) -> void:
+	gust = _gust_noise.get_noise_1d(_t * 13.0 + 100.0) * 7.0 * st
+	_flash = move_toward(_flash, 0.0, delta * 5.0)
+	if _bolt_life > 0.0:
+		_bolt_life -= delta
+		_bolt.visible = _bolt_life > 0.0 and not (_bolt_life > 0.1 and _bolt_life < 0.15)   # 한 번 깜빡
+	if st < 0.6 or _cam == null:
+		return
+	_bolt_t -= delta
+	if _bolt_t <= 0.0:
+		_bolt_t = randf_range(3.5, 10.0)
+		_strike()
+
+
+## 번개 한 번: 멀리서 줄기가 내리꽂히고 하늘이 번쩍, 거리만큼 늦게 천둥
+func _strike() -> void:
+	var cp := _cam.global_position
+	# 대부분은 보는 쪽 앞에 친다
+	var fwd := -_cam.global_basis.z
+	var a := atan2(fwd.z, fwd.x) + randf_range(-0.9, 0.9) if randf() < 0.75 else randf() * TAU
+	var dist := randf_range(250.0, 1100.0)
+	var base := cp + Vector3(cos(a) * dist, 0.0, sin(a) * dist)
+	base.y = WorldShape.floor_y(base.x, base.z)
+	var top := base + Vector3(randf_range(-60, 60), 420.0 + randf() * 80.0, randf_range(-60, 60))
+	var im: ImmediateMesh = _bolt.mesh
+	im.clear_surfaces()
+	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	_bolt_branch(im, top, base, 5.0, 14, cp)
+	for i in 2:
+		var k := randf_range(0.25, 0.6)
+		var from := top.lerp(base, k)
+		var to := from + Vector3(randf_range(-120, 120), -(from.y - base.y) * randf_range(0.3, 0.6), randf_range(-120, 120))
+		_bolt_branch(im, from, to, 2.5, 7, cp)
+	im.surface_end()
+	_bolt_life = 0.28
+	_bolt.visible = true
+	_flash = clampf(1.3 - dist / 1200.0, 0.3, 1.0)
+	var m = get_tree().get_first_node_in_group("main")
+	if m and dist < 500.0:
+		m._flash = maxf(m._flash, 0.15)
+	var delay := dist / 340.0
+	var vol := lerpf(6.0, -6.0, dist / 1100.0)
+	get_tree().create_timer(delay, false).timeout.connect(func(): Sfx.play("thunder", vol, randf_range(0.85, 1.1)))
+
+
+func _bolt_branch(im: ImmediateMesh, from: Vector3, to: Vector3, w: float, segs: int, cp: Vector3) -> void:
+	var prev := from
+	for i in range(1, segs + 1):
+		var t := float(i) / segs
+		var p := from.lerp(to, t)
+		if i < segs:
+			p += Vector3(randf_range(-1, 1), 0.0, randf_range(-1, 1)) * (from.distance_to(to) / segs) * 0.6
+		var seg := p - prev
+		var side := seg.cross(cp - prev).normalized() * w
+		im.surface_add_vertex(prev - side)
+		im.surface_add_vertex(prev + side)
+		im.surface_add_vertex(p + side)
+		im.surface_add_vertex(prev - side)
+		im.surface_add_vertex(p + side)
+		im.surface_add_vertex(p - side)
+		prev = p
 
 
 func update_visuals() -> void:
@@ -252,13 +347,19 @@ func update_visuals() -> void:
 	var gray := clampf((cloud - 0.5) * 1.6, 0.0, 1.0)
 	top = top.lerp(Color(top.get_luminance(), top.get_luminance(), top.get_luminance()) * 1.1, gray * 0.7)
 	hor = hor.lerp(Color(hor.get_luminance(), hor.get_luminance(), hor.get_luminance()), gray * 0.6)
+	# 폭풍: 하늘·안개·빛이 어두운 납빛으로
+	var st: float = cur.get("storm", 0.0)
+	top = top.lerp(Color(0.16, 0.18, 0.22), st * 0.8)
+	hor = hor.lerp(Color(0.3, 0.32, 0.36), st * 0.75)
+	fog_c = fog_c.lerp(Color(0.26, 0.28, 0.32), st * 0.75)
+	amb = amb * (1.0 - 0.35 * st)
 	sky_mat.set_shader_parameter("top_color", top)
 	sky_mat.set_shader_parameter("horizon_color", hor)
 	sky_mat.set_shader_parameter("ground_color", hor * 0.55)
 	sky_mat.set_shader_parameter("sun_color", sun_c)
 	sky_mat.set_shader_parameter("stars", stars * (1.0 - gray))
 	sky_mat.set_shader_parameter("cloud_cover", cloud)
-	sky_mat.set_shader_parameter("cloud_light", Color(1, 1, 1).lerp(sun_c, 0.35) * maxf(sun_e, 0.12) * 0.85 + amb * 0.3)
+	sky_mat.set_shader_parameter("cloud_light", (Color(1, 1, 1).lerp(sun_c, 0.35) * maxf(sun_e, 0.12) * 0.85 + amb * 0.3) * (1.0 - 0.6 * st))
 	sky_mat.set_shader_parameter("cloud_shade", amb * 0.9 + hor * 0.25)
 	# 해 방향
 	var season := int(GameState.data.get("season", 0))
@@ -274,8 +375,13 @@ func update_visuals() -> void:
 	moon.basis = Basis.looking_at(-md, Vector3.UP)
 	moon.light_energy = 0.4 * stars
 	sky_mat.set_shader_parameter("moon_dir", md)
-	env.ambient_light_color = amb
-	env.ambient_light_energy = lerpf(0.6, 1.0, light_k)
+	# 번개: 하늘과 주변광이 순간 밝아진다
+	if _flash > 0.01:
+		sky_mat.set_shader_parameter("top_color", top.lerp(Color(0.75, 0.8, 0.95), _flash * 0.8))
+		sky_mat.set_shader_parameter("horizon_color", hor.lerp(Color(0.85, 0.88, 1.0), _flash * 0.8))
+		sky_mat.set_shader_parameter("cloud_light", Color(0.9, 0.93, 1.0) * (1.0 + _flash * 2.0))
+	env.ambient_light_color = amb.lerp(Color(0.8, 0.85, 1.0), _flash * 0.7)
+	env.ambient_light_energy = lerpf(0.6, 1.0, light_k) + _flash * 1.5
 	env.fog_light_color = fog_c
 	env.fog_density = 0.00032 * float(cur["fog"])
 	env.fog_sun_scatter = 0.25 * sun_e
@@ -283,8 +389,10 @@ func update_visuals() -> void:
 		world.water_mat.set_shader_parameter("darkness", stars * 0.8)
 		world.water_mat.set_shader_parameter("roughness_boost", clampf(float(cur["wind"]) / 12.0, 0.0, 1.0))
 		world.set_thermal_strength((1.0 - stars) * clampf(sun_e, 0.0, 1.0))
+		world.set_storm(st)
 	if rain_fx:
 		rain_fx.emitting = float(cur["rain"]) > 0.3
+		rain_fx.amount_ratio = lerpf(0.55, 1.0, float(cur.get("storm", 0.0)))
 		snow_fx.emitting = float(cur["snow"]) > 0.3
 	Sfx.rain_level = float(cur["rain"])
 

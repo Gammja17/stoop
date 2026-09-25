@@ -19,6 +19,8 @@ var _owl_tonight := false
 var _obj_t := 0.0
 var _mate_spawn_t := -1.0
 var _year_fledged := 0
+var _storm_at := -1
+var _storm_end := -1
 
 
 func setup(p_main) -> void:
@@ -276,6 +278,7 @@ func on_hour(h: int) -> void:
 		_spawn_owl()
 	if h == 6:
 		main.prey_mgr.clear_bats()
+	_storm_hour(h)
 
 
 func on_dusk() -> void:
@@ -313,9 +316,40 @@ func on_new_day() -> void:
 
 func _new_weather() -> void:
 	var w: String = main.day_night.pick_weather()
+	_storm_at = -1
+	if w == "storm":
+		_storm_at = randi_range(10, 14)
+		main.day_night.apply_weather("cloudy")
+		main.world.set_wet(0.0)
+		GameState.say(Loc.t("storm_forecast"), "warn")
+		return
 	main.day_night.apply_weather(w)
 	main.world.set_wet(1.0 if w == "rain" else 0.0)
 	GameState.say(Loc.t("weather_today") % Loc.t("weather_" + w), "info")
+	if w == "fog":
+		GameState.say(Loc.t("fog_hint"), "info")
+
+
+func _storm_hour(h: int) -> void:
+	if _storm_end >= 0 and h == _storm_end:
+		main.day_night.apply_weather("rain")
+		GameState.say(Loc.t("storm_over"), "info")
+		_storm_end = -1
+		return
+	if _storm_at < 0:
+		return
+	if h == _storm_at:
+		_storm_at = -1
+		_storm_end = (h + 3) % 24
+		main.day_night.apply_weather("storm")
+		main.world.set_wet(1.0)
+		GameState.say(Loc.t("storm_coming"), "warn")
+		Sfx.play("thunder", 2.0, 0.8)
+		# 바다의 새떼가 폭풍을 피해 육지로 몰려온다 → 사냥 기회
+		var from := Vector3(WorldShape.coast_x(300.0) + 500.0, 0, 300.0)
+		main.prey_mgr.spawn_group("sandpiper", from, WorldShape.fields, 300.0, 36, "storm_flock")
+		main.prey_mgr.spawn_group("duck", from + Vector3(0, 0, -300), WorldShape.bay, 300.0, 6, "storm_flock")
+		GameState.say(Loc.t("storm_flock"), "gold")
 
 
 func _daily_events() -> void:

@@ -63,6 +63,7 @@ func _process(delta: float) -> void:
 	if main == null:
 		return
 	Prey.focus = falcon.global_position
+	Prey.detect_mult = 0.5 if float(main.day_night.cur.get("fog", 1.0)) > 3.5 else 1.0
 	_spawn_t -= delta
 	if _spawn_t <= 0.0:
 		_spawn_t = 2.5
@@ -94,6 +95,8 @@ func _maintain(initial: bool) -> void:
 		var want: int = h.groups[season]
 		if night:
 			want = int(ceil(want * 0.3))
+		elif float(main.day_night.cur.get("storm", 0.0)) > 0.5:
+			want = int(ceil(want * 0.5))
 		if h.has("near"):
 			var hd := Vector2(falcon.global_position.x - h.center.x, falcon.global_position.z - h.center.z).length()
 			if hd > h.near:

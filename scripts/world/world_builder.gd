@@ -608,8 +608,19 @@ func set_thermal_boost(k: float) -> void:
 
 # ---------- 구름 ----------
 
+var cloud_mat: StandardMaterial3D
+
+
+## 폭풍엔 구름을 납빛으로
+func set_storm(k: float) -> void:
+	if cloud_mat:
+		cloud_mat.albedo_color = Color(1, 1, 1).lerp(Color(0.34, 0.36, 0.4), k)
+		cloud_mat.emission_energy_multiplier = 0.35 * (1.0 - 0.8 * k)
+
+
 func _build_clouds() -> void:
 	var mat := StandardMaterial3D.new()
+	cloud_mat = mat
 	mat.albedo_color = Color(1, 1, 1)
 	mat.roughness = 1.0
 	mat.rim_enabled = true

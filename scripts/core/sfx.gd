@@ -345,6 +345,22 @@ func _build_synth() -> void:
 		blp += ((randf() * 2.0 - 1.0) - blp) * 0.08
 		bs[i] = blp * minf(t * 10.0, 1.0) * pow(1.0 - t, 1.5) * 3.0
 	_add("blow", bs)
+	# 천둥: 날카로운 균열음 + 길게 구르는 저음
+	for v in 2:
+		var tn := int(MIX * 3.2)
+		var ts := PackedFloat32Array()
+		ts.resize(tn)
+		var lp1 := 0.0
+		var lp2 := 0.0
+		for i in tn:
+			var t := float(i) / MIX
+			var x := randf() * 2.0 - 1.0
+			lp1 += (x - lp1) * 0.03
+			lp2 += (lp1 - lp2) * 0.05
+			var roll := (0.6 + 0.4 * sin(t * (5.0 + v * 2.0)) * sin(t * 1.7)) * exp(-t * 0.9) * minf(t * 8.0, 1.0)
+			var crack := x * exp(-t * 18.0) * 0.5
+			ts[i] = lp2 * roll * 9.0 + crack
+		_add("thunder", ts)
 	# 목표 달성 차임
 	_add("chime", _chime([880.0, 1318.5]))
 	_add("chime_big", _chime([659.3, 880.0, 1318.5]))

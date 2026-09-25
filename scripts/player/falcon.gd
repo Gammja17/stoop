@@ -285,7 +285,7 @@ func _fly(delta: float) -> void:
 		updraft += 1.6 * (1.0 - carry_w * 0.5)
 	var wind := _wind()
 	# 상승기류 안의 공기는 바람과 함께 움직이므로 기둥 밖으로 밀려나지 않는다
-	velocity = dir * speed + Vector3.UP * updraft + wind * (0.35 + 0.3 * (1.0 - tuck)) * (1.0 - 0.85 * thermal_k)
+	velocity = dir * speed + Vector3.UP * (updraft + _gust() * (1.0 - tuck * 0.7)) + wind * (0.35 + 0.3 * (1.0 - tuck)) * (1.0 - 0.85 * thermal_k)
 	# 고도 제한
 	if global_position.y > WorldShape.MAX_ALT and velocity.y > 0.0:
 		velocity.y *= 0.2
@@ -347,6 +347,13 @@ func _wind() -> Vector3:
 	if main and main.day_night:
 		return main.day_night.wind
 	return Vector3.ZERO
+
+
+func _gust() -> float:
+	var main := get_tree().get_first_node_in_group("main")
+	if main and main.day_night:
+		return main.day_night.gust
+	return 0.0
 
 
 func _compute_updraft() -> float:

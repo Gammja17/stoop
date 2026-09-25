@@ -47,6 +47,7 @@ var _lod_acc := 0.0
 
 const LOD_DIST := 700.0
 static var focus := Vector3.ZERO   # 매 위치 (PreyManager가 매 프레임 갱신)
+static var detect_mult := 1.0      # 안개 속에선 늦게 알아챈다
 
 
 func setup(p_kind: String, pos: Vector3, p_home: Vector3, p_home_r: float) -> Prey:
@@ -178,7 +179,7 @@ func _awareness() -> void:
 		return
 	var rel := f.global_position - global_position
 	var d := rel.length()
-	var range_k := 1.4 if f.speed < 20.0 else 1.0
+	var range_k := (1.4 if f.speed < 20.0 else 1.0) * detect_mult
 	if d > float(t.detect) * range_k:
 		return
 	var from_above := rel.normalized().y > 0.5
